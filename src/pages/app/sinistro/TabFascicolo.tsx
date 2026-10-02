@@ -62,12 +62,16 @@ export function TabFascicolo({ sinistro: s, modifica, onFineModifica }: { sinist
           <Riga etichetta="Email" valore={s.richiedente_email} />
           <Riga etichetta="PEC" valore={s.richiedente_pec} />
           <Riga etichetta="Telefono" valore={s.richiedente_telefono} mono />
+          <Riga etichetta="Patrocinatore" valore={s.patrocinatore} />
+          <Riga etichetta="Teste" valore={s.testimone} />
+          {s.tipologia !== "lesioni_persone" && <Riga etichetta="Conducente" valore={s.conducente} />}
+          {s.tipologia !== "lesioni_persone" && <Riga etichetta="Targa" valore={s.targa?.toUpperCase()} mono />}
         </section>
         <section className="rounded-lg border bg-card px-5 py-3">
           <h2 className="mb-1 text-[15px] font-semibold">Richiesta</h2>
           <Riga etichetta="Denuncia" valore={dataIt(s.data_denuncia)} mono />
           <Riga etichetta="Ricezione" valore={dataIt(s.data_ricezione)} mono />
-          <Riga etichetta="Importo richiesto" valore={euro(s.importo_richiesto)} mono />
+          <Riga etichetta="Ammontare del danno" valore={euro(s.importo_richiesto)} mono />
           <Riga etichetta="Importo liquidato" valore={euro(s.importo_liquidato)} mono />
           <Riga etichetta="Note interne" valore={s.note && <span className="whitespace-pre-wrap">{s.note}</span>} />
         </section>

@@ -12,9 +12,11 @@ Un'unica pagina di accesso (`/accedi`): il ruolo decide dove si entra.
 1. **Fascicolo** — registrazione della richiesta di risarcimento; il protocollo `SIR-<anno>-<progressivo>` viene assegnato dal database.
 2. **Checklist** — generata dal modello dell'ente (voci generali + voci della tipologia); spunte, note e allegati per voce.
 3. **Valutazione** — i parametri configurabili danno un punteggio; alcune risposte sono *ostative*. Esito **da liquidare** se nessuna condizione ostativa è scattata e il punteggio raggiunge la soglia dell'ente.
-4. **Documenti** — avvio istruttoria, richiesta di integrazione, report di valutazione, proposta di liquidazione o comunicazione di rigetto. Anteprima in app e pagina di stampa/PDF (`/app/stampa/:id`).
+4. **Documenti** — ricalcati sui modelli dell'Ufficio Assicurazioni del Comune di Varese: avvio istruttoria, richiesta di integrazione, **scheda danno** (accoglimento o rigetto), **lettera di invio quietanza** + **atto di quietanza** (importo in lettere, caselle IBAN), comunicazione di rigetto. Anteprima in app e pagina di stampa/PDF (`/app/stampa/:id`).
 
-I parametri attuali sono segnaposto ragionevoli: vanno sostituiti con quelli reali da **Impostazioni → Parametri di valutazione** (criteri sì/no, numerici con soglia, a scelta multipla; punti e condizioni ostative sono liberi).
+Il numero di pratica segue il formato dell'ufficio (`26/001`, "Ns. rif. n."). La valutazione comprende i testi della scheda danno (iter istruttorio, relazione del settore tecnico, verbale delle autorità) e la quantificazione: imponibile riconosciuto meno le riduzioni (evitabilità 30%, degrado d'uso 20%, altre) → stima attribuita al danno.
+
+I criteri di valutazione sono stati ricavati dalle schede danno reali e restano modificabili da **Impostazioni → Parametri di valutazione** (criteri sì/no, numerici con soglia, a scelta multipla; punti e condizioni ostative sono liberi).
 
 ## Stack
 

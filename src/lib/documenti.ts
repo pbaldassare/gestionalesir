@@ -1,6 +1,8 @@
+// Modelli dei documenti, ricalcati sui modelli in uso all'Ufficio Assicurazioni del Comune di Varese:
+// lettera di invio quietanza, atto di quietanza, scheda danno (accoglimento e rigetto).
 import type { ChecklistVoce, Ente, Sinistro, TipoDocumento, Valutazione } from "./types";
 import { TIPOLOGIE } from "./types";
-import { dataEstesa, dataIt, euro } from "./format";
+import { dataEstesa, dataIt, euro, importoInLettere } from "./format";
 
 const esc = (v: unknown): string =>
   String(v ?? "")
@@ -10,6 +12,7 @@ const esc = (v: unknown): string =>
     .replace(/"/g, "&quot;");
 
 const nl = (v: string | null | undefined) => esc(v).replace(/\n/g, "<br/>");
+const vuoto = (v: string | null | undefined, segnaposto = "________________") => (v && v.trim() ? esc(v) : segnaposto);
 
 export interface DocumentoGenerato {
   tipo: TipoDocumento;
@@ -26,69 +29,88 @@ interface Contesto {
   termineGiorni?: number;
 }
 
-function intestazione(ente: Ente, sinistro: Sinistro, protocolloDoc: string) {
-  const indirizzo = [ente.indirizzo, [ente.cap, ente.citta, ente.provincia ? `(${ente.provincia})` : ""].filter(Boolean).join(" ")]
-    .filter(Boolean)
-    .join(" · ");
+// ---------------------------------------------------------------------------
+// Blocchi comuni
+// ---------------------------------------------------------------------------
+function intestazioneEnte(ente: Ente) {
+  const righeUfficio = (ente.ufficio ?? "Ufficio Sinistri").split(/\s[–-]\s/);
   return `
   <div class="intestazione">
     <div>
       <div class="ente">${esc(ente.nome)}</div>
-      <div class="ufficio">${esc(ente.ufficio ?? "Ufficio Sinistri")}${indirizzo ? " · " + esc(indirizzo) : ""}</div>
-      ${ente.pec ? `<div class="ufficio">PEC ${esc(ente.pec)}</div>` : ""}
+      <div class="ufficio">${righeUfficio.map(esc).join("<br/>")}</div>
     </div>
-    <div class="meta">
-      Prot. ${esc(sinistro.numero_protocollo)}<br/>
-      ${esc(protocolloDoc)}<br/>
-      ${esc(ente.citta ?? "")}, ${esc(dataEstesa(new Date().toISOString()))}
-    </div>
+    <div class="meta">${esc(ente.citta ?? "")}, ${esc(dataEstesa(new Date().toISOString()))}</div>
+  </div>`;
+}
+
+function piedeEnte(ente: Ente) {
+  const sede = [ente.indirizzo, [ente.cap, ente.citta].filter(Boolean).join(" ")].filter(Boolean).join(" - ");
+  const contatti = [ente.email, ente.pec].filter(Boolean).join(" - ");
+  const altro = [ente.telefono ? `tel. ${ente.telefono}` : "", ente.sito_web].filter(Boolean).join(" - ");
+  return `
+  <div class="piede">
+    <strong>${esc(ente.nome).toUpperCase()}</strong>${sede ? " - " + esc(sede) : ""}${ente.codice_fiscale ? " - C.F./P.IVA " + esc(ente.codice_fiscale) : ""}<br/>
+    ${esc(ente.ufficio ?? "")}<br/>
+    ${esc(contatti)}${altro ? "<br/>" + esc(altro) : ""}
   </div>`;
 }
 
 function destinatario(s: Sinistro) {
+  const conPatrocinio = s.patrocinatore ? `${s.richiedente_nome} c/o ${s.patrocinatore}` : s.richiedente_nome;
   return `
   <div class="destinatario">
-    Spett.le / Gent.mo<br/>
-    <strong>${esc(s.richiedente_nome)}</strong><br/>
+    Spett.le ${s.patrocinatore ? "Studio Legale / " : ""}Sig.${s.patrocinatore ? "" : "/Sig.ra"}<br/>
+    <strong>${esc(conPatrocinio).toUpperCase()}</strong><br/>
     ${s.richiedente_indirizzo ? nl(s.richiedente_indirizzo) + "<br/>" : ""}
-    ${s.richiedente_pec ? "PEC " + esc(s.richiedente_pec) + "<br/>" : s.richiedente_email ? esc(s.richiedente_email) + "<br/>" : ""}
+    ${s.richiedente_pec ? "PEC " + esc(s.richiedente_pec) : s.richiedente_email ? esc(s.richiedente_email) : ""}
   </div>`;
 }
 
-function riepilogoSinistro(s: Sinistro) {
+function oggettoSinistro(ente: Ente, s: Sinistro) {
+  const conPatrocinio = s.patrocinatore ? `${s.richiedente_nome} c/o ${s.patrocinatore}` : s.richiedente_nome;
   return `
-  <table>
-    <tr><th style="width:34%">Protocollo</th><td>${esc(s.numero_protocollo)}</td></tr>
-    <tr><th>Data del sinistro</th><td>${esc(dataIt(s.data_sinistro))}${s.ora_sinistro ? " ore " + esc(s.ora_sinistro.slice(0, 5)) : ""}</td></tr>
-    <tr><th>Luogo</th><td>${esc(s.luogo)}</td></tr>
-    <tr><th>Tipologia</th><td>${esc(TIPOLOGIE[s.tipologia])}</td></tr>
-    <tr><th>Richiedente</th><td>${esc(s.richiedente_nome)}${s.richiedente_cf ? " · C.F. " + esc(s.richiedente_cf) : ""}</td></tr>
-    <tr><th>Importo richiesto</th><td>${esc(euro(s.importo_richiesto))}</td></tr>
-    <tr><th>Descrizione</th><td>${nl(s.descrizione)}</td></tr>
-  </table>`;
+  <p class="oggetto">Oggetto: Sinistro del ${esc(dataIt(s.data_sinistro))}<br/>
+  avvenuto in ${esc(ente.citta ?? "")}, ${esc(s.luogo)}<br/>
+  ${esc(conPatrocinio).toUpperCase()}<br/>
+  Ns. rif. n. ${esc(s.numero_protocollo)} <span class="normale">(da citare sempre nella corrispondenza)</span>.</p>`;
 }
 
 function firma(ente: Ente) {
+  const righeUfficio = (ente.ufficio ?? "Ufficio Sinistri").split(/\s[–-]\s/);
   return `
   <div class="firma">
-    <div>${esc(ente.ufficio ?? "Ufficio Sinistri")}</div>
-    <div class="ruolo">${esc(ente.responsabile ?? "Il Responsabile")}</div>
-    <div class="linea"></div>
-  </div>`;
+    <div>${righeUfficio.map(esc).join("<br/>")}</div>
+    <div class="ruolo">(${esc(ente.responsabile ?? "Il Responsabile")})</div>
+  </div>
+  <div class="nota">Il documento è firmato digitalmente ai sensi del D.Lgs. 82/2005 s.m.i. e norme collegate e sostituisce il documento cartaceo e la firma autografa.</div>`;
 }
 
-const notaPrivacy = `<div class="nota">I dati personali sono trattati ai sensi del Regolamento (UE) 2016/679 esclusivamente per la gestione della pratica di risarcimento. Documento generato dal Gestionale SIR.</div>`;
+function stimaDaValutazione(v: Valutazione | null | undefined, s: Sinistro): number | null {
+  if (!v) return s.importo_richiesto;
+  if (v.importo_proposto != null) return v.importo_proposto;
+  const base = v.importo_base ?? s.importo_richiesto;
+  if (base == null) return null;
+  return Math.round(base * (v.riduzioni ?? []).reduce((acc, r) => acc * (1 - Number(r.percentuale) / 100), 1) * 100) / 100;
+}
 
+// ---------------------------------------------------------------------------
+// Generatore
+// ---------------------------------------------------------------------------
 export function generaDocumento(tipo: TipoDocumento, ctx: Contesto): DocumentoGenerato {
   switch (tipo) {
     case "avvio_istruttoria":
       return avvioIstruttoria(ctx);
     case "richiesta_integrazione":
       return richiestaIntegrazione(ctx);
+    case "scheda_danno":
     case "report_valutazione":
-      return reportValutazione(ctx);
+      return schedaDanno(ctx);
+    case "lettera_quietanza":
+      return letteraQuietanza(ctx);
+    case "atto_quietanza":
     case "lettera_liquidazione":
-      return letteraLiquidazione(ctx);
+      return attoQuietanza(ctx);
     case "lettera_rigetto":
       return letteraRigetto(ctx);
     default:
@@ -99,102 +121,144 @@ export function generaDocumento(tipo: TipoDocumento, ctx: Contesto): DocumentoGe
 function avvioIstruttoria({ ente, sinistro: s, checklist = [] }: Contesto): DocumentoGenerato {
   const mancanti = checklist.filter((v) => !v.completata);
   const html = `
-  ${intestazione(ente, s, "Avvio istruttoria")}
+  ${intestazioneEnte(ente)}
   ${destinatario(s)}
-  <p class="oggetto">Oggetto: comunicazione di avvio del procedimento — richiesta di risarcimento danni, sinistro del ${esc(dataIt(s.data_sinistro))} in ${esc(s.luogo)}.</p>
-  <p>Con riferimento alla richiesta di risarcimento pervenuta in data ${esc(dataIt(s.data_ricezione))} e registrata al protocollo <strong>${esc(s.numero_protocollo)}</strong>, si comunica che questo Ente ha avviato l'istruttoria volta ad accertare la dinamica del fatto, la sussistenza della responsabilità e l'entità del danno lamentato.</p>
-  ${riepilogoSinistro(s)}
+  ${oggettoSinistro(ente, s)}
+  <p>Gentile utente,</p>
+  <p>con la presente si comunica che la richiesta di risarcimento pervenuta in data ${esc(dataIt(s.data_ricezione))} è stata presa in carico da questo Ufficio con il riferimento indicato in oggetto. È stata avviata l'istruttoria volta ad accertare la dinamica del fatto, la competenza dell'Ente e l'entità del danno lamentato.</p>
   ${
     mancanti.length
-      ? `<p>Al fine di consentire la completa istruttoria della pratica, si invita a far pervenire, ove non già trasmessa, la seguente documentazione:</p>
+      ? `<p>Per il corretto perfezionamento della pratica Vi preghiamo di far pervenire, ove non già trasmessa, la seguente documentazione:</p>
          <ul>${mancanti.map((v) => `<li>${esc(v.titolo)}${v.obbligatoria ? "" : " <em>(se disponibile)</em>"}${v.descrizione ? " — " + esc(v.descrizione) : ""}</li>`).join("")}</ul>`
-      : `<p>La documentazione pervenuta risulta al momento completa. L'Ente si riserva di richiedere eventuali integrazioni nel corso dell'istruttoria.</p>`
+      : `<p>La documentazione pervenuta risulta al momento completa. L'Ufficio si riserva di richiedere eventuali integrazioni nel corso dell'istruttoria.</p>`
   }
-  <p>Per ogni comunicazione si prega di citare il numero di protocollo indicato in intestazione${ente.pec ? ` e di utilizzare l'indirizzo PEC ${esc(ente.pec)}` : ""}.</p>
-  <p>Distinti saluti.</p>
-  ${firma(ente)}
-  ${notaPrivacy}`;
+  <p>L'intera documentazione dovrà essere inviata al seguente indirizzo email: <strong>${esc(ente.email ?? ente.pec ?? "")}</strong>, citando sempre il numero di riferimento.</p>
+  <p>Cordiali saluti.</p>
+  ${firma(ente)}`;
   return { tipo: "avvio_istruttoria", titolo: `Avvio istruttoria ${s.numero_protocollo}`, html };
 }
 
 function richiestaIntegrazione({ ente, sinistro: s, checklist = [], termineGiorni = 30 }: Contesto): DocumentoGenerato {
   const mancanti = checklist.filter((v) => !v.completata);
   const html = `
-  ${intestazione(ente, s, "Richiesta integrazione")}
+  ${intestazioneEnte(ente)}
   ${destinatario(s)}
-  <p class="oggetto">Oggetto: richiesta di integrazione documentale — pratica ${esc(s.numero_protocollo)}, sinistro del ${esc(dataIt(s.data_sinistro))}.</p>
-  <p>Dall'esame della documentazione trasmessa a corredo della richiesta di risarcimento in oggetto, risulta mancante o incompleta la seguente documentazione, necessaria alla definizione della pratica:</p>
+  ${oggettoSinistro(ente, s)}
+  <p>Gentile utente,</p>
+  <p>dall'esame della documentazione trasmessa a corredo della richiesta in oggetto risulta mancante o incompleta la seguente documentazione, necessaria alla definizione della pratica:</p>
   <ul>${mancanti.map((v) => `<li class="check">${esc(v.titolo)}${v.descrizione ? " — " + esc(v.descrizione) : ""}${v.note ? " <em>(" + esc(v.note) + ")</em>" : ""}</li>`).join("")}</ul>
-  <p>Si invita a trasmettere quanto sopra entro <strong>${termineGiorni} giorni</strong> dal ricevimento della presente. In mancanza, l'Ente procederà alla definizione della pratica sulla base degli atti disponibili.</p>
-  <p>Distinti saluti.</p>
-  ${firma(ente)}
-  ${notaPrivacy}`;
+  <p>Vi preghiamo di trasmettere quanto sopra entro <strong>${termineGiorni} giorni</strong> dal ricevimento della presente all'indirizzo email <strong>${esc(ente.email ?? ente.pec ?? "")}</strong>. In mancanza, l'Ufficio procederà alla definizione della pratica sulla base degli atti disponibili.</p>
+  <p>Si precisa che l'invio di quanto sopra indicato è strettamente necessario per il corretto perfezionamento e la definizione della pratica.</p>
+  <p>Cordiali saluti.</p>
+  ${firma(ente)}`;
   return { tipo: "richiesta_integrazione", titolo: `Richiesta integrazione ${s.numero_protocollo}`, html };
 }
 
-function reportValutazione({ ente, sinistro: s, checklist = [], valutazione: v }: Contesto): DocumentoGenerato {
-  if (!v) throw new Error("Report non generabile senza una valutazione salvata");
-  const obbl = checklist.filter((c) => c.obbligatoria);
-  const compl = obbl.filter((c) => c.completata).length;
+function schedaDanno({ ente, sinistro: s, checklist = [], valutazione: v }: Contesto): DocumentoGenerato {
+  if (!v) throw new Error("La scheda danno richiede una valutazione salvata");
+  const positivo = v.esito === "da_liquidare";
+  const stima = positivo ? stimaDaValutazione(v, s) : 0;
+  const descrizione = `${s.causa_presunta ? "danni " + (s.tipologia === "lesioni_persone" ? "alla persona" : "materiali") + " a causa di " + s.causa_presunta.toLowerCase() : s.descrizione}${s.targa ? " tg. " + s.targa.toUpperCase() : ""}`;
   const html = `
-  ${intestazione(ente, s, "Report di valutazione")}
-  <h1>Report di valutazione del sinistro ${esc(s.numero_protocollo)}</h1>
-  <p>Relazione istruttoria interna redatta sulla base dei parametri di valutazione adottati dall'Ente. Il presente documento costituisce supporto alla decisione e non ha valore di comunicazione verso il richiedente.</p>
-  <h2>1. Dati del sinistro</h2>
-  ${riepilogoSinistro(s)}
-  <h2>2. Stato della documentazione</h2>
-  <p>Voci obbligatorie acquisite: <strong>${compl} su ${obbl.length}</strong>.</p>
-  <ul>${checklist.map((c) => `<li class="check ${c.completata ? "ok" : ""}">${esc(c.titolo)}${c.obbligatoria ? "" : " <em>(facoltativa)</em>"}${c.note ? " — " + esc(c.note) : ""}</li>`).join("")}</ul>
-  <h2>3. Parametri di valutazione</h2>
-  <table>
-    <thead><tr><th>Parametro</th><th>Esito</th><th style="width:18%">Punteggio</th></tr></thead>
-    <tbody>
-    ${v.dettaglio.map((d) => `<tr><td>${esc(d.etichetta)}</td><td>${esc(d.risposta)}${d.bloccante ? " <strong>— ostativo</strong>" : ""}</td><td>${d.punteggio} / ${d.punteggio_max}</td></tr>`).join("")}
-    </tbody>
+  ${intestazioneEnte(ente)}
+  <h1>SCHEDA DANNO</h1>
+  <p class="progr">N° progr. <strong>${esc(s.numero_protocollo)}</strong></p>
+  <h2>Elementi identificativi del danno</h2>
+  <table class="scheda">
+    <tr><th>Sinistro data</th><td>${esc(dataIt(s.data_sinistro))}${s.ora_sinistro ? " ore " + esc(s.ora_sinistro.slice(0, 5)) : ""}</td></tr>
+    <tr><th>Assicurato</th><td>${esc(s.richiedente_nome).toUpperCase()}${s.patrocinatore ? " C/O " + esc(s.patrocinatore).toUpperCase() : ""}</td></tr>
+    <tr><th>Conducente</th><td>${vuoto(s.conducente, "—").toUpperCase()}</td></tr>
+    <tr><th>Descrizione sinistro</th><td>${esc(descrizione)}</td></tr>
+    <tr><th>Ammont. danno €</th><td>${esc(euro(s.importo_richiesto))} <em>(imponibile da fattura/scontrino)</em></td></tr>
+    <tr><th>Luogo del sinistro Via/P.zza</th><td>${esc(s.luogo)}</td></tr>
+    <tr><th>Teste</th><td>${vuoto(s.testimone, "—")}</td></tr>
+    <tr><th>Stima attribuita al danno €</th><td><strong>${esc(euro(stima))}</strong></td></tr>
+    <tr><th>Patrocinatore – se presente</th><td>${vuoto(s.patrocinatore, "—")}</td></tr>
+    <tr><th>Tipologia</th><td>${esc(TIPOLOGIE[s.tipologia])}</td></tr>
   </table>
-  <p>Punteggio complessivo: <strong>${v.punteggio} / ${v.punteggio_max}</strong> pari al <strong>${v.percentuale}%</strong> (soglia di liquidabilità: ${v.soglia}%).${v.bloccata ? " È presente almeno una condizione ostativa." : ""}</p>
-  <h2>4. Esito</h2>
-  <div class="esito ${v.esito === "da_liquidare" ? "si" : "no"}">${v.esito === "da_liquidare" ? "Sinistro da liquidare" : "Sinistro non liquidabile"}</div>
-  ${v.esito === "da_liquidare" && v.importo_proposto != null ? `<p>Importo proposto per la liquidazione: <strong>${esc(euro(v.importo_proposto))}</strong>${s.importo_richiesto ? ` a fronte di ${esc(euro(s.importo_richiesto))} richiesti` : ""}.</p>` : ""}
-  ${v.motivazioni.length ? `<p>Motivazioni:</p><ul>${v.motivazioni.map((m) => `<li>${esc(m)}</li>`).join("")}</ul>` : "<p>Nessun rilievo: tutti i parametri risultano pienamente soddisfatti.</p>"}
-  ${v.note ? `<p><em>Note dell'istruttore:</em> ${nl(v.note)}</p>` : ""}
-  ${firma(ente)}
-  <div class="nota">Report generato il ${esc(dataIt(v.created_at, true))} dal Gestionale SIR sulla base dei parametri in vigore alla data di valutazione.</div>`;
-  return { tipo: "report_valutazione", titolo: `Report valutazione ${s.numero_protocollo}`, html };
+
+  <h2>Breve descrizione dell'iter istruttorio posto in essere</h2>
+  <p>${v.iter_istruttorio ? nl(v.iter_istruttorio) : nl(s.descrizione)}</p>
+  ${!positivo ? `<p><strong>Il sinistro viene rigettato${v.relazione_tecnica ? " come da relazione tecnica" : ""}.</strong></p>` : ""}
+
+  <h2>Nel corso dell'istruttoria risultava possibile acquisire</h2>
+  <ul>${checklist.map((c) => `<li class="check ${c.completata ? "ok" : ""}">${esc(c.titolo)}${c.note ? " — " + esc(c.note) : ""}</li>`).join("")}</ul>
+
+  <h2>La relazione del settore tecnico segnala quanto segue</h2>
+  <p>${v.relazione_tecnica ? nl(v.relazione_tecnica) : "—"}</p>
+  <h2>Il verbale delle autorità segnala quanto segue</h2>
+  <p>${v.verbale_autorita ? nl(v.verbale_autorita) : "—"}</p>
+
+  <h2>Valutazione</h2>
+  <p>Al termine dell'istruttoria condotta, lo scrivente ritiene opportuno procedere alla definizione della posizione, evidenziando quanto segue.</p>
+  <p>Alla luce di quanto sopra esposto, si consideri che:</p>
+  <ul>${v.dettaglio.map((d) => `<li>${esc(d.etichetta)}: <strong>${esc(d.risposta)}</strong>${d.bloccante ? " <em>(elemento ostativo)</em>" : ""}</li>`).join("")}</ul>
+  <p>Punteggio complessivo ${v.punteggio} / ${v.punteggio_max} pari al <strong>${v.percentuale}%</strong> (soglia ${v.soglia}%).</p>
+  ${
+    positivo
+      ? `${(v.riduzioni ?? []).length ? `<p>Riduzioni applicate all'imponibile di ${esc(euro(v.importo_base ?? s.importo_richiesto))}:</p><ul>${v.riduzioni.map((r) => `<li>${esc(r.etichetta)}: ${r.percentuale}% in meno</li>`).join("")}</ul>` : ""}
+         <p>L'importo pari a <strong>${esc(euro(stima))}</strong> si ritiene congruo.</p>
+         <div class="esito si">Si procede con la trattazione del sinistro a saldo e stralcio per la somma MAX di ${esc(euro(stima))}</div>
+         <p>Inoltrata quietanza con il ____________________</p>`
+      : `${v.motivazioni.length ? `<p>Motivazioni del rigetto:</p><ul>${v.motivazioni.map((m) => `<li>${esc(m)}</li>`).join("")}</ul>` : ""}
+         <div class="esito no">Inviato rigetto il ____________________</div>`
+  }
+  ${v.note ? `<p><em>Note:</em> ${nl(v.note)}</p>` : ""}
+  ${firma(ente)}`;
+  return { tipo: "scheda_danno", titolo: `Scheda danno ${s.numero_protocollo}${positivo ? "" : " (rigetto)"}`, html };
 }
 
-function letteraLiquidazione({ ente, sinistro: s, valutazione: v, importo }: Contesto): DocumentoGenerato {
-  const somma = importo ?? v?.importo_proposto ?? s.importo_richiesto;
+function letteraQuietanza({ ente, sinistro: s }: Contesto): DocumentoGenerato {
+  const veicolo = s.targa || s.tipologia !== "lesioni_persone";
   const html = `
-  ${intestazione(ente, s, "Proposta di liquidazione")}
+  ${intestazioneEnte(ente)}
   ${destinatario(s)}
-  <p class="oggetto">Oggetto: definizione della richiesta di risarcimento — pratica ${esc(s.numero_protocollo)}, sinistro del ${esc(dataIt(s.data_sinistro))} in ${esc(s.luogo)}.</p>
-  <p>A conclusione dell'istruttoria relativa alla richiesta in oggetto, esaminata la documentazione prodotta e accertata la dinamica del fatto, questo Ente ritiene di poter riconoscere il danno lamentato.</p>
-  <p>Si propone pertanto la liquidazione, a titolo di risarcimento e a tacitazione di ogni pretesa connessa al sinistro, della somma di <strong>${esc(euro(somma))}</strong>${s.importo_richiesto && somma !== s.importo_richiesto ? ` a fronte dell'importo richiesto di ${esc(euro(s.importo_richiesto))}` : ""}.</p>
-  ${ente.compagnia_assicurativa ? `<p>La liquidazione avverrà${ente.franchigia ? ` per la quota in franchigia a carico dell'Ente e, per l'eventuale eccedenza,` : ""} per il tramite della compagnia ${esc(ente.compagnia_assicurativa)}${ente.numero_polizza ? ` (polizza n. ${esc(ente.numero_polizza)})` : ""}.</p>` : ""}
-  <p>Per procedere al pagamento si invita a restituire la presente sottoscritta per accettazione, unitamente alle coordinate bancarie (IBAN) intestate al richiedente, entro 30 giorni dal ricevimento.</p>
-  <p>Distinti saluti.</p>
-  ${firma(ente)}
-  <div class="firma" style="margin-left:0; margin-top:16mm">
-    <div>Per accettazione e quietanza</div>
-    <div class="ruolo">${esc(s.richiedente_nome)}</div>
-    <div class="linea"></div>
-  </div>
-  ${notaPrivacy}`;
-  return { tipo: "lettera_liquidazione", titolo: `Proposta di liquidazione ${s.numero_protocollo}`, html };
+  ${oggettoSinistro(ente, s)}
+  <p>Gentile utente,</p>
+  <p>con la presente si trasmette la quietanza in allegato, che Vi preghiamo di restituire debitamente compilata e sottoscritta.</p>
+  <p>Alla documentazione dovrà essere allegata la copia del documento d'identità e del codice fiscale del firmatario, oltre che il modulo privacy firmato${veicolo ? " e i documenti dell'auto (libretto di circolazione)" : ""}.</p>
+  <p>L'intera documentazione richiesta dovrà essere inviata al seguente indirizzo email: <strong>${esc(ente.email ?? ente.pec ?? "")}</strong>.</p>
+  <p>Si precisa che l'invio di quanto sopra indicato è strettamente necessario per il corretto perfezionamento e la definizione della pratica.</p>
+  <p>Cordiali saluti.</p>
+  ${firma(ente)}`;
+  return { tipo: "lettera_quietanza", titolo: `Lettera invio quietanza ${s.numero_protocollo}`, html };
+}
+
+function attoQuietanza({ ente, sinistro: s, valutazione: v, importo }: Contesto): DocumentoGenerato {
+  const somma = importo ?? stimaDaValutazione(v, s) ?? 0;
+  const caselle = Array.from({ length: 27 }, () => "<td></td>").join("");
+  const html = `
+  <h1 class="centro">ATTO DI QUIETANZA</h1>
+  <p class="progr">Sinistro n. <strong>${esc(s.numero_protocollo)}</strong><br/>Data sinistro: <strong>${esc(dataIt(s.data_sinistro))}</strong></p>
+  <p>Il presente accordo è stato raggiunto ai soli fini di prevenire l'alea del giudizio a seguito di valutazione del sinistro da parte dell'Ufficio Assicurazioni, il quale ha agito esclusivamente nell'interesse del ${esc(ente.nome)}.</p>
+  <h2>Sezione per danneggiato</h2>
+  <p>In relazione al sinistro di cui sopra, il/la sottoscritto/a <strong>${esc(s.richiedente_nome).toUpperCase()}</strong>${s.patrocinatore ? " c/o " + esc(s.patrocinatore).toUpperCase() : ""} (${s.richiedente_cf ? "C.F. " + esc(s.richiedente_cf).toUpperCase() : "C.F. ____________________"}) dichiara di accettare in via transattiva la somma di <strong>${esc(euro(somma))}</strong> (${esc(importoInLettere(somma))}), proposta dall'Ufficio Assicurazioni, in nome e per conto e nell'esclusivo interesse del ${esc(ente.nome)}, quale integrale e definitivo risarcimento di tutti i danni patrimoniali e non patrimoniali subiti, diretti ed indiretti, presenti e futuri, conosciuti e non, alle cose ed alle persone, accessori e spese, anche di patrocinio.</p>
+  <p>Con la sottoscrizione del presente atto dichiara conseguentemente che, a seguito del ricevimento di tale somma, sarà completamente soddisfatta ogni sua pretesa in relazione al suindicato sinistro e non avrà più nulla a che pretendere dal ${esc(ente.nome)}, per qualsiasi titolo, ragione o causa, nonché da eventuali coobbligati dell'Ente medesimo, con espressa rinuncia a qualsiasi azione, intrapresa e/o da intraprendere, in sede civile e/o penale.</p>
+  <p>Fornisce gli estremi del proprio IBAN al fine del versamento della somma accettata.</p>
+  <p>Istituto bancario/Poste ________________________________________________________________</p>
+  <p>IBAN</p>
+  <table class="iban"><tr>${caselle}</tr></table>
+  <p class="piccolo">Al fine di evitare errori di trascrizione e/o problemi di leggibilità, si prega di inviare copia dell'intestazione del conto con visibilità dell'IBAN.</p>
+  <table class="scheda">
+    <tr><th>Intestatario conto</th><td>Nome ______________________________________<br/>Indirizzo ___________________________________</td></tr>
+  </table>
+  <p class="sottoscrizione">Letto, confermato e sottoscritto<br/>in __________________________________ il ____/____/________ &nbsp;&nbsp;&nbsp;&nbsp; Firma ______________________________</p>
+  ${piedeEnte(ente)}`;
+  return { tipo: "atto_quietanza", titolo: `Atto di quietanza ${s.numero_protocollo}`, html };
 }
 
 function letteraRigetto({ ente, sinistro: s, valutazione: v }: Contesto): DocumentoGenerato {
   const motivi = v?.motivazioni ?? [];
   const html = `
-  ${intestazione(ente, s, "Comunicazione di rigetto")}
+  ${intestazioneEnte(ente)}
   ${destinatario(s)}
-  <p class="oggetto">Oggetto: definizione della richiesta di risarcimento — pratica ${esc(s.numero_protocollo)}, sinistro del ${esc(dataIt(s.data_sinistro))} in ${esc(s.luogo)}.</p>
-  <p>A conclusione dell'istruttoria relativa alla richiesta in oggetto, esaminata la documentazione prodotta e gli accertamenti svolti, questo Ente non ritiene sussistenti i presupposti per il riconoscimento del risarcimento richiesto.</p>
+  ${oggettoSinistro(ente, s)}
+  <p>Gentile utente,</p>
+  <p>a conclusione dell'istruttoria relativa alla richiesta in oggetto, esaminata la documentazione prodotta e gli accertamenti svolti, questo Ufficio non ritiene sussistenti i presupposti per il riconoscimento del risarcimento richiesto.</p>
+  ${v?.relazione_tecnica ? `<p>La relazione del settore tecnico segnala quanto segue: <em>${nl(v.relazione_tecnica)}</em></p>` : ""}
   ${motivi.length ? `<p>La decisione si fonda sulle seguenti risultanze:</p><ul>${motivi.map((m) => `<li>${esc(m)}</li>`).join("")}</ul>` : ""}
   <p>Resta salva la facoltà di produrre, entro 30 giorni dal ricevimento della presente, ulteriori elementi documentali o testimoniali idonei a modificare le conclusioni sopra esposte; in tal caso la pratica sarà riesaminata.</p>
-  <p>Distinti saluti.</p>
-  ${firma(ente)}
-  ${notaPrivacy}`;
+  <p>Cordiali saluti.</p>
+  ${firma(ente)}`;
   return { tipo: "lettera_rigetto", titolo: `Comunicazione di rigetto ${s.numero_protocollo}`, html };
 }

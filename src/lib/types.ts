@@ -6,9 +6,12 @@ export type TipoParametro = "si_no" | "numero" | "scelta";
 export type TipoDocumento =
   | "avvio_istruttoria"
   | "richiesta_integrazione"
+  | "scheda_danno"
+  | "lettera_quietanza"
+  | "atto_quietanza"
+  | "lettera_rigetto"
   | "report_valutazione"
   | "lettera_liquidazione"
-  | "lettera_rigetto"
   | "altro";
 
 export interface Ente {
@@ -28,6 +31,7 @@ export interface Ente {
   compagnia_assicurativa: string | null;
   numero_polizza: string | null;
   franchigia: number | null;
+  sito_web: string | null;
   soglia_liquidazione: number;
   attivo: boolean;
   created_at: string;
@@ -65,6 +69,10 @@ export interface Sinistro {
   richiedente_email: string | null;
   richiedente_telefono: string | null;
   richiedente_pec: string | null;
+  conducente: string | null;
+  targa: string | null;
+  patrocinatore: string | null;
+  testimone: string | null;
   importo_richiesto: number | null;
   importo_liquidato: number | null;
   esito: Esito | null;
@@ -152,9 +160,19 @@ export interface Valutazione {
   esito: Esito;
   motivazioni: string[];
   importo_proposto: number | null;
+  importo_base: number | null;
+  riduzioni: Riduzione[];
+  iter_istruttorio: string | null;
+  relazione_tecnica: string | null;
+  verbale_autorita: string | null;
   note: string | null;
   created_by: string | null;
   created_at: string;
+}
+
+export interface Riduzione {
+  etichetta: string;
+  percentuale: number;
 }
 
 export interface Documento {
@@ -209,8 +227,11 @@ export const TIPOLOGIE: Record<Tipologia, string> = {
 export const TIPI_DOCUMENTO: Record<TipoDocumento, string> = {
   avvio_istruttoria: "Comunicazione di avvio istruttoria",
   richiesta_integrazione: "Richiesta di integrazione documentale",
+  scheda_danno: "Scheda danno",
+  lettera_quietanza: "Lettera di invio quietanza",
+  atto_quietanza: "Atto di quietanza",
+  lettera_rigetto: "Comunicazione di rigetto",
   report_valutazione: "Report di valutazione",
   lettera_liquidazione: "Proposta di liquidazione",
-  lettera_rigetto: "Comunicazione di rigetto",
   altro: "Altro documento",
 };

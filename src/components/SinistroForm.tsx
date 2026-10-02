@@ -12,6 +12,7 @@ export type DatiSinistro = Pick<
   Sinistro,
   | "tipologia" | "data_sinistro" | "ora_sinistro" | "data_denuncia" | "data_ricezione" | "luogo" | "descrizione" | "causa_presunta"
   | "richiedente_nome" | "richiedente_cf" | "richiedente_indirizzo" | "richiedente_email" | "richiedente_telefono" | "richiedente_pec"
+  | "conducente" | "targa" | "patrocinatore" | "testimone"
   | "importo_richiesto" | "note"
 >;
 
@@ -30,6 +31,10 @@ const vuoto: DatiSinistro = {
   richiedente_email: null,
   richiedente_telefono: null,
   richiedente_pec: null,
+  conducente: null,
+  targa: null,
+  patrocinatore: null,
+  testimone: null,
   importo_richiesto: null,
   note: null,
 };
@@ -127,16 +132,32 @@ export function SinistroForm({
         <Campo id="r_tel" label="Telefono">
           <Input id="r_tel" value={d.richiedente_telefono ?? ""} onChange={testo("richiedente_telefono")} />
         </Campo>
+        <Campo id="patrocinatore" label="Patrocinatore, se presente (avvocato o studio)">
+          <Input id="patrocinatore" value={d.patrocinatore ?? ""} onChange={testo("patrocinatore")} placeholder="Avv. Mario Bianchi" />
+        </Campo>
+        <Campo id="testimone" label="Teste">
+          <Input id="testimone" value={d.testimone ?? ""} onChange={testo("testimone")} placeholder="Nominativo del testimone" />
+        </Campo>
+        {d.tipologia !== "lesioni_persone" && (
+          <>
+            <Campo id="conducente" label="Conducente del veicolo">
+              <Input id="conducente" value={d.conducente ?? ""} onChange={testo("conducente")} placeholder="Se diverso dall'assicurato" />
+            </Campo>
+            <Campo id="targa" label="Targa">
+              <Input id="targa" className="font-mono uppercase" value={d.targa ?? ""} onChange={testo("targa")} />
+            </Campo>
+          </>
+        )}
       </Sezione>
 
-      <Sezione titolo="Richiesta" descrizione="Date di protocollo e importo chiesto.">
+      <Sezione titolo="Richiesta" descrizione="Date di protocollo e ammontare del danno.">
         <Campo id="data_denuncia" label="Data della denuncia">
           <Input id="data_denuncia" type="date" required value={d.data_denuncia} onChange={(e) => set("data_denuncia", e.target.value)} />
         </Campo>
         <Campo id="data_ricezione" label="Data di ricezione dall'Ente">
           <Input id="data_ricezione" type="date" required value={d.data_ricezione} onChange={(e) => set("data_ricezione", e.target.value)} />
         </Campo>
-        <Campo id="importo" label="Importo richiesto (€)">
+        <Campo id="importo" label="Ammontare del danno (€, imponibile da fattura/scontrino)">
           <Input id="importo" type="number" step="0.01" min="0" className="font-mono" value={d.importo_richiesto ?? ""} onChange={(e) => set("importo_richiesto", e.target.value === "" ? null : Number(e.target.value))} />
         </Campo>
         <Campo id="note" label="Note interne" span2>

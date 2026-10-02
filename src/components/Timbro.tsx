@@ -5,7 +5,7 @@ import { STATI } from "@/lib/types";
 export function Protocollo({ numero, className }: { numero: string; className?: string }) {
   return (
     <span className={cn("protocollo", className)}>
-      <span className="text-muted-foreground">Prot.</span> {numero}
+      <span className="text-muted-foreground">Rif.</span> {numero}
     </span>
   );
 }

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { aggiornaSinistro, eliminaDocumento, registraEvento, salvaDocumento } from "@/lib/api";
 import { generaDocumento } from "@/lib/documenti";
 import { useAuth } from "@/hooks/useAuth";
-import { dataIt } from "@/lib/format";
+import { dataIt, euro } from "@/lib/format";
 import { TIPI_DOCUMENTO, type ChecklistVoce, type Documento, type Sinistro, type TipoDocumento, type Valutazione } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { cn } from "@/lib/utils";
 
 interface Generatore {
-  tipo: TipoDocumento;
+  chiave: string;
+  tipi: TipoDocumento[];
   titolo: string;
   descrizione: string;
   disponibile: boolean;
@@ -44,6 +45,14 @@ function AnteprimaFoglio({ html }: { html: string }) {
   );
 }
 
+function stimaValutazione(v: Valutazione | null, s: Sinistro): number | null {
+  if (!v) return s.importo_richiesto;
+  if (v.importo_proposto != null) return v.importo_proposto;
+  const base = v.importo_base ?? s.importo_richiesto;
+  if (base == null) return null;
+  return Math.round(base * (v.riduzioni ?? []).reduce((acc, r) => acc * (1 - Number(r.percentuale) / 100), 1) * 100) / 100;
+}
+
 export function TabDocumenti({ sinistro: s, voci, valutazione, documenti }: { sinistro: Sinistro; voci: ChecklistVoce[]; valutazione: Valutazione | null; documenti: Documento[] }) {
   const qc = useQueryClient();
   const { ente, session } = useAuth();
@@ -52,31 +61,36 @@ export function TabDocumenti({ sinistro: s, voci, valutazione, documenti }: { si
   const [importo, setImporto] = useState<string>("");
 
   const mancanti = voci.filter((v) => !v.completata);
+  const positivo = valutazione?.esito === "da_liquidare";
   const generatori: Generatore[] = [
-    { tipo: "avvio_istruttoria", titolo: TIPI_DOCUMENTO.avvio_istruttoria, descrizione: "Conferma al richiedente la presa in carico e indica i documenti ancora da produrre.", disponibile: true },
-    { tipo: "richiesta_integrazione", titolo: TIPI_DOCUMENTO.richiesta_integrazione, descrizione: "Sollecita le voci della checklist non ancora acquisite, con termine di 30 giorni.", disponibile: mancanti.length > 0, motivo: "La checklist è completa: non c'è nulla da integrare." },
-    { tipo: "report_valutazione", titolo: TIPI_DOCUMENTO.report_valutazione, descrizione: "Relazione interna con parametri, punteggio ed esito motivato.", disponibile: !!valutazione, motivo: "Serve una valutazione salvata." },
-    { tipo: "lettera_liquidazione", titolo: TIPI_DOCUMENTO.lettera_liquidazione, descrizione: "Comunica il riconoscimento del danno e l'importo proposto, con quietanza.", disponibile: valutazione?.esito === "da_liquidare", motivo: valutazione ? "L'esito della valutazione è negativo." : "Serve una valutazione con esito positivo." },
-    { tipo: "lettera_rigetto", titolo: TIPI_DOCUMENTO.lettera_rigetto, descrizione: "Comunica il diniego con le motivazioni emerse dalla valutazione.", disponibile: valutazione?.esito === "non_liquidare", motivo: valutazione ? "L'esito della valutazione è positivo." : "Serve una valutazione con esito negativo." },
+    { chiave: "avvio", tipi: ["avvio_istruttoria"], titolo: TIPI_DOCUMENTO.avvio_istruttoria, descrizione: "Conferma al richiedente la presa in carico e indica i documenti ancora da produrre.", disponibile: true },
+    { chiave: "integrazione", tipi: ["richiesta_integrazione"], titolo: TIPI_DOCUMENTO.richiesta_integrazione, descrizione: "Sollecita le voci della checklist non ancora acquisite, con termine di 30 giorni.", disponibile: mancanti.length > 0, motivo: "La checklist è completa: non c'è nulla da integrare." },
+    { chiave: "scheda", tipi: ["scheda_danno"], titolo: TIPI_DOCUMENTO.scheda_danno, descrizione: "Scheda interna dell'istruttoria: elementi del danno, documenti acquisiti, relazione tecnica, valutazione ed esito.", disponibile: !!valutazione, motivo: "Serve una valutazione salvata." },
+    { chiave: "quietanza", tipi: ["lettera_quietanza", "atto_quietanza"], titolo: "Quietanza: lettera di invio e atto", descrizione: "Genera insieme la lettera di trasmissione e l'atto di quietanza con importo in lettere e spazio per l'IBAN.", disponibile: positivo, motivo: valutazione ? "L'esito della valutazione è negativo." : "Serve una valutazione con esito positivo." },
+    { chiave: "rigetto", tipi: ["lettera_rigetto"], titolo: TIPI_DOCUMENTO.lettera_rigetto, descrizione: "Comunica il diniego con la relazione tecnica e le motivazioni emerse dalla valutazione.", disponibile: valutazione?.esito === "non_liquidare", motivo: valutazione ? "L'esito della valutazione è positivo." : "Serve una valutazione con esito negativo." },
   ];
 
   const genera = useMutation({
-    mutationFn: async ({ tipo, importo }: { tipo: TipoDocumento; importo?: number | null }) => {
-      const g = generaDocumento(tipo, { ente: ente!, sinistro: s, checklist: voci, valutazione, importo });
-      const doc = await salvaDocumento({ sinistro_id: s.id, ente_id: s.ente_id, tipo, titolo: g.titolo, contenuto_html: g.html, created_by: session!.user.id });
-      await registraEvento(s.id, s.ente_id, "documento", `Generato: ${g.titolo}`, session!.user.id);
-      if (tipo === "avvio_istruttoria" && s.stato === "aperto") await aggiornaSinistro(s.id, { stato: "istruttoria" });
-      if (tipo === "lettera_liquidazione") await aggiornaSinistro(s.id, { stato: "liquidato", importo_liquidato: importo ?? valutazione?.importo_proposto ?? s.importo_richiesto });
-      if (tipo === "lettera_rigetto") await aggiornaSinistro(s.id, { stato: "respinto" });
-      return doc;
+    mutationFn: async ({ tipi, importo }: { tipi: TipoDocumento[]; importo?: number | null }) => {
+      const generati: Documento[] = [];
+      for (const tipo of tipi) {
+        const g = generaDocumento(tipo, { ente: ente!, sinistro: s, checklist: voci, valutazione, importo });
+        const doc = await salvaDocumento({ sinistro_id: s.id, ente_id: s.ente_id, tipo, titolo: g.titolo, contenuto_html: g.html, created_by: session!.user.id });
+        await registraEvento(s.id, s.ente_id, "documento", `Generato: ${g.titolo}`, session!.user.id);
+        generati.push(doc);
+      }
+      if (tipi.includes("avvio_istruttoria") && s.stato === "aperto") await aggiornaSinistro(s.id, { stato: "istruttoria" });
+      if (tipi.includes("atto_quietanza")) await aggiornaSinistro(s.id, { stato: "liquidato", importo_liquidato: importo ?? stimaValutazione(valutazione, s) });
+      if (tipi.includes("lettera_rigetto")) await aggiornaSinistro(s.id, { stato: "respinto" });
+      return generati;
     },
-    onSuccess: (doc) => {
+    onSuccess: (docs) => {
       qc.invalidateQueries({ queryKey: ["documenti", s.id] });
       qc.invalidateQueries({ queryKey: ["sinistro", s.id] });
       qc.invalidateQueries({ queryKey: ["eventi", s.id] });
       qc.invalidateQueries({ queryKey: ["sinistri"] });
-      toast.success("Documento generato", { description: doc.titolo });
-      setAnteprima(doc);
+      toast.success(docs.length > 1 ? `${docs.length} documenti generati` : "Documento generato", { description: docs.map((d) => d.titolo).join(" · ") });
+      setAnteprima(docs[docs.length - 1]);
     },
     onError: (e: Error) => toast.error("Documento non generato", { description: e.message }),
   });
@@ -88,22 +102,22 @@ export function TabDocumenti({ sinistro: s, voci, valutazione, documenti }: { si
   });
 
   function avvia(g: Generatore) {
-    if (g.tipo === "lettera_liquidazione") {
-      setImporto(String(valutazione?.importo_proposto ?? s.importo_richiesto ?? ""));
+    if (g.chiave === "quietanza") {
+      setImporto(String(stimaValutazione(valutazione, s) ?? ""));
       setImportoDialog(true);
       return;
     }
-    genera.mutate({ tipo: g.tipo });
+    genera.mutate({ tipi: g.tipi });
   }
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_1.4fr]">
       <section>
         <h2 className="mb-1 text-[15px] font-semibold">Genera</h2>
-        <p className="mb-3 text-[12.5px] text-muted-foreground">I documenti usano l'intestazione dell'Ente e i dati del fascicolo al momento della generazione.</p>
+        <p className="mb-3 text-[12.5px] text-muted-foreground">Modelli dell'Ufficio Assicurazioni, compilati con l'intestazione dell'Ente e i dati del fascicolo al momento della generazione.</p>
         <ul className="space-y-2">
           {generatori.map((g) => (
-            <li key={g.tipo} className={cn("rounded-lg border bg-card px-4 py-3", !g.disponibile && "opacity-60")}>
+            <li key={g.chiave} className={cn("rounded-lg border bg-card px-4 py-3", !g.disponibile && "opacity-60")}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-[13.5px] font-medium">{g.titolo}</div>
@@ -161,16 +175,17 @@ export function TabDocumenti({ sinistro: s, voci, valutazione, documenti }: { si
       <Dialog open={importoDialog} onOpenChange={setImportoDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-serif">Importo da liquidare</DialogTitle>
-            <DialogDescription>Somma proposta a tacitazione di ogni pretesa. Il fascicolo passerà allo stato "Liquidato".</DialogDescription>
+            <DialogTitle className="font-serif">Somma della quietanza</DialogTitle>
+            <DialogDescription>Importo accettato in via transattiva, a saldo e stralcio. Il fascicolo passerà allo stato "Liquidato".</DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
             <Label htmlFor="imp">Importo (€)</Label>
             <Input id="imp" type="number" step="0.01" min="0" className="font-mono" value={importo} onChange={(e) => setImporto(e.target.value)} autoFocus />
+            {s.importo_richiesto != null && <div className="text-[12px] text-muted-foreground">Ammontare del danno {euro(s.importo_richiesto)}{valutazione && ` · stima della valutazione ${euro(stimaValutazione(valutazione, s))}`}</div>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setImportoDialog(false)}>Annulla</Button>
-            <Button disabled={importo === "" || genera.isPending} onClick={() => { setImportoDialog(false); genera.mutate({ tipo: "lettera_liquidazione", importo: Number(importo) }); }}>Genera la lettera</Button>
+            <Button disabled={importo === "" || genera.isPending} onClick={() => { setImportoDialog(false); genera.mutate({ tipi: ["lettera_quietanza", "atto_quietanza"], importo: Number(importo) }); }}>Genera lettera e atto</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

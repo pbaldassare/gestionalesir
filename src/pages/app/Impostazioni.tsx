@@ -54,6 +54,7 @@ function SezioneEnte() {
           {campo("pec", "PEC", { type: "email" })}
           {campo("email", "Email", { type: "email" })}
           {campo("telefono", "Telefono")}
+          {campo("sito_web", "Sito web")}
         </div>
       </section>
       <section className="rounded-lg border bg-card">

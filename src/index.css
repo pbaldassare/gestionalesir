@@ -118,6 +118,16 @@
   .foglio .esito.si { color: #1f8a70; }
   .foglio .esito.no { color: #c8372d; }
   .foglio .nota { font-family: "IBM Plex Sans", sans-serif; font-size: 9pt; color: #4a5568; margin-top: 10mm; border-top: 1px solid #c9ccd3; padding-top: 3mm; }
+  .foglio .oggetto .normale { font-weight: 400; }
+  .foglio .progr { font-family: "IBM Plex Mono", monospace; font-size: 11pt; margin-bottom: 6mm; }
+  .foglio .centro { text-align: center; letter-spacing: 0.08em; }
+  .foglio table.scheda th { width: 34%; text-transform: none; letter-spacing: 0; font-size: 10pt; }
+  .foglio table.iban { table-layout: fixed; margin: 2mm 0 2mm; }
+  .foglio table.iban td { height: 8mm; padding: 0; border: 1px solid #14213d; }
+  .foglio .piccolo { font-family: "IBM Plex Sans", sans-serif; font-size: 9pt; color: #4a5568; }
+  .foglio .sottoscrizione { margin-top: 10mm; font-family: "IBM Plex Sans", sans-serif; font-size: 10.5pt; }
+  .foglio .piede { margin-top: 16mm; border-top: 1px solid #14213d; padding-top: 3mm; font-family: "IBM Plex Sans", sans-serif; font-size: 8.5pt; color: #14213d; text-align: center; line-height: 1.5; }
+  .foglio .firma .ruolo { margin-top: 1mm; }
   .foglio ul { margin: 0 0 4mm 5mm; padding: 0; }
   .foglio li { margin-bottom: 1.2mm; }
   .foglio .check::before { content: "☐ "; }
