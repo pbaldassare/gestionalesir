@@ -1,0 +1,139 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,500;0,600;1,400&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* carta d'ufficio: grigio-azzurro freddo, non crema */
+    --background: 210 24% 96%;
+    --foreground: 222 51% 16%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 51% 16%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 51% 16%;
+    /* blu timbro */
+    --primary: 224 66% 49%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 214 26% 92%;
+    --secondary-foreground: 222 40% 22%;
+    --muted: 214 20% 93%;
+    --muted-foreground: 220 12% 42%;
+    --accent: 214 30% 94%;
+    --accent-foreground: 222 51% 16%;
+    /* rosso timbro */
+    --destructive: 4 63% 48%;
+    --destructive-foreground: 0 0% 100%;
+    /* verde verderame */
+    --success: 166 63% 33%;
+    --success-foreground: 0 0% 100%;
+    --warning: 39 96% 43%;
+    --warning-foreground: 0 0% 100%;
+    --border: 214 20% 86%;
+    --input: 214 20% 82%;
+    --ring: 224 66% 49%;
+    --ink: 222 51% 16%;
+    --ink-muted: 214 30% 82%;
+    --ink-soft: 220 32% 24%;
+    --radius: 0.375rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "ss01", "cv05";
+  }
+
+  h1, h2, h3 {
+    @apply font-serif tracking-tight;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.18);
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Numero di protocollo: sempre in mono, mai in prosa */
+  .protocollo {
+    @apply font-mono text-[13px] font-medium tracking-wide text-ink;
+  }
+
+  /* Timbro: la firma visiva della suite. Doppio bordo, maiuscole in mono. */
+  .timbro {
+    @apply inline-flex flex-col items-center justify-center px-4 py-2 font-mono uppercase leading-none select-none;
+    border: 3px double currentColor;
+    border-radius: 4px;
+    letter-spacing: 0.14em;
+  }
+  .timbro-verde { @apply text-success; }
+  .timbro-rosso { @apply text-destructive; }
+  .timbro-blu { @apply text-primary; }
+  .timbro-inclinato { transform: rotate(-6deg); }
+
+  .eyebrow {
+    @apply font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground;
+  }
+
+  /* Foglio: documento con intestazione, usato in anteprima e stampa */
+  .foglio {
+    @apply bg-white text-[#1a1a1a] shadow-sm;
+    width: 210mm;
+    min-height: 297mm;
+    padding: 22mm 20mm 20mm;
+    font-family: "IBM Plex Serif", Georgia, serif;
+    font-size: 11.5pt;
+    line-height: 1.55;
+  }
+  .foglio h1 { font-size: 16pt; margin: 0 0 4mm; }
+  .foglio h2 { font-size: 12.5pt; margin: 8mm 0 2mm; }
+  .foglio p { margin: 0 0 3mm; }
+  .foglio table { width: 100%; border-collapse: collapse; margin: 3mm 0 5mm; font-size: 10.5pt; }
+  .foglio th, .foglio td { border: 1px solid #c9ccd3; padding: 1.6mm 2.4mm; text-align: left; vertical-align: top; }
+  .foglio th { background: #eef1f5; font-family: "IBM Plex Sans", sans-serif; font-weight: 600; font-size: 9.5pt; letter-spacing: 0.04em; text-transform: uppercase; }
+  .foglio .intestazione { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #14213d; padding-bottom: 4mm; margin-bottom: 8mm; }
+  .foglio .intestazione .ente { font-family: "IBM Plex Serif", serif; font-weight: 600; font-size: 15pt; color: #14213d; }
+  .foglio .intestazione .ufficio { font-family: "IBM Plex Sans", sans-serif; font-size: 9.5pt; color: #4a5568; }
+  .foglio .meta { font-family: "IBM Plex Mono", monospace; font-size: 9.5pt; color: #14213d; text-align: right; }
+  .foglio .destinatario { margin: 6mm 0 8mm 55%; font-family: "IBM Plex Sans", sans-serif; font-size: 10.5pt; }
+  .foglio .oggetto { font-family: "IBM Plex Sans", sans-serif; font-weight: 600; margin: 0 0 6mm; }
+  .foglio .firma { margin-top: 14mm; margin-left: 55%; font-family: "IBM Plex Sans", sans-serif; font-size: 10.5pt; }
+  .foglio .firma .ruolo { color: #4a5568; font-size: 9.5pt; }
+  .foglio .firma .linea { margin-top: 12mm; border-top: 1px solid #14213d; width: 60mm; }
+  .foglio .esito { display: inline-block; border: 3px double currentColor; border-radius: 4px; padding: 2.5mm 5mm; font-family: "IBM Plex Mono", monospace; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; transform: rotate(-4deg); margin: 4mm 0 6mm; }
+  .foglio .esito.si { color: #1f8a70; }
+  .foglio .esito.no { color: #c8372d; }
+  .foglio .nota { font-family: "IBM Plex Sans", sans-serif; font-size: 9pt; color: #4a5568; margin-top: 10mm; border-top: 1px solid #c9ccd3; padding-top: 3mm; }
+  .foglio ul { margin: 0 0 4mm 5mm; padding: 0; }
+  .foglio li { margin-bottom: 1.2mm; }
+  .foglio .check::before { content: "☐ "; }
+  .foglio .check.ok::before { content: "☑ "; }
+}
+
+@media print {
+  body { background: white; }
+  .no-print { display: none !important; }
+  .foglio { box-shadow: none; width: auto; min-height: auto; padding: 0; }
+  @page { size: A4; margin: 18mm 18mm 16mm; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
