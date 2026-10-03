@@ -16,6 +16,10 @@ Un'unica pagina di accesso (`/accedi`): il ruolo decide dove si entra.
 
 Il numero di pratica segue il formato dell'ufficio (`26/001`, "Ns. rif. n."). La valutazione comprende i testi della scheda danno (iter istruttorio, relazione del settore tecnico, verbale delle autorità) e la quantificazione: imponibile riconosciuto meno le riduzioni (evitabilità 30%, degrado d'uso 20%, altre) → stima attribuita al danno.
 
+**Modelli modificabili**: la pagina *Modelli* (`/app/modelli`) permette a ogni ente di vedere, modificare e ripristinare i testi dei documenti. I campi `{{...}}` (mostrati come etichette nell'editor) vengono riempiti con i dati del fascicolo; i predefiniti stanno in `src/lib/modelli.ts`, le personalizzazioni nella tabella `modelli_documento`.
+
+**Luogo del sinistro**: suggerimenti di indirizzo, geocodifica e mappa con Google Maps (`src/lib/maps.ts`); la chiave browser va limitata per referrer nella console Google Cloud.
+
 I criteri di valutazione sono stati ricavati dalle schede danno reali e restano modificabili da **Impostazioni → Parametri di valutazione** (criteri sì/no, numerici con soglia, a scelta multipla; punti e condizioni ostative sono liberi).
 
 ## Stack

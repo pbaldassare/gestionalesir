@@ -128,6 +128,12 @@
   .foglio .sottoscrizione { margin-top: 10mm; font-family: "IBM Plex Sans", sans-serif; font-size: 10.5pt; }
   .foglio .piede { margin-top: 16mm; border-top: 1px solid #14213d; padding-top: 3mm; font-family: "IBM Plex Sans", sans-serif; font-size: 8.5pt; color: #14213d; text-align: center; line-height: 1.5; }
   .foglio .firma .ruolo { margin-top: 1mm; }
+
+  /* Campi del modello nel foglio modificabile */
+  .foglio .campo { display: inline-block; padding: 0 1.6mm; border-radius: 3px; background: hsl(var(--primary) / 0.1); color: hsl(var(--primary)); font-family: "IBM Plex Sans", sans-serif; font-size: 0.82em; font-weight: 500; font-style: normal; line-height: 1.5; white-space: nowrap; cursor: default; user-select: all; }
+  .foglio .campo-blocco { display: block; padding: 2.5mm 3mm; margin: 1mm 0; border: 1px dashed hsl(var(--primary) / 0.5); background: hsl(var(--primary) / 0.05); white-space: normal; }
+  .foglio-modificabile { cursor: text; }
+  .foglio-modificabile:focus-visible { outline: none; }
   .foglio ul { margin: 0 0 4mm 5mm; padding: 0; }
   .foglio li { margin-bottom: 1.2mm; }
   .foglio .check::before { content: "☐ "; }

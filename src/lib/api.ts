@@ -205,3 +205,29 @@ export async function chiamaAdmin(body: Record<string, unknown>): Promise<Record
 }
 
 export const TIPOLOGIE_ORDINATE: Tipologia[] = ["danni_cose", "lesioni_persone", "misto"];
+
+// ---- Modelli di documento -------------------------------------------------
+export interface ModelloDocumento {
+  id: string;
+  ente_id: string;
+  chiave: string;
+  contenuto_html: string;
+  updated_by: string | null;
+  updated_at: string;
+}
+
+export async function listaModelliDocumento(): Promise<ModelloDocumento[]> {
+  return lancia(await supabase.from("modelli_documento").select("*"));
+}
+
+export async function salvaModelloDocumento(enteId: string, chiave: string, contenuto_html: string, userId: string) {
+  lancia(
+    await supabase
+      .from("modelli_documento")
+      .upsert({ ente_id: enteId, chiave, contenuto_html, updated_by: userId, updated_at: new Date().toISOString() }, { onConflict: "ente_id,chiave" }),
+  );
+}
+
+export async function ripristinaModelloDocumento(chiave: string) {
+  lancia(await supabase.from("modelli_documento").delete().eq("chiave", chiave));
+}

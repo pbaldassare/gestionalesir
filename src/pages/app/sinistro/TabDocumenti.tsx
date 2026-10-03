@@ -1,13 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, FileText, Printer, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { aggiornaSinistro, eliminaDocumento, registraEvento, salvaDocumento } from "@/lib/api";
+import { aggiornaSinistro, eliminaDocumento, listaModelliDocumento, registraEvento, salvaDocumento } from "@/lib/api";
+import { stimaValutazione, type ChiaveModello } from "@/lib/modelli";
 import { generaDocumento } from "@/lib/documenti";
 import { useAuth } from "@/hooks/useAuth";
 import { dataIt, euro } from "@/lib/format";
-import { TIPI_DOCUMENTO, type ChecklistVoce, type Documento, type Sinistro, type TipoDocumento, type Valutazione } from "@/lib/types";
+import { TIPI_DOCUMENTO, type ChecklistVoce, type Documento, type Sinistro, type Valutazione } from "@/lib/types";
+import { AnteprimaFoglio } from "@/components/Foglio";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,41 +18,11 @@ import { cn } from "@/lib/utils";
 
 interface Generatore {
   chiave: string;
-  tipi: TipoDocumento[];
+  modelli: ChiaveModello[];
   titolo: string;
   descrizione: string;
   disponibile: boolean;
   motivo?: string;
-}
-
-/** Scala il foglio A4 (794px) alla larghezza disponibile, senza scroll orizzontale. */
-function AnteprimaFoglio({ html }: { html: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [scala, setScala] = useState(1);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const misura = () => setScala(Math.min(1, (el.clientWidth - 32) / 794));
-    misura();
-    const ro = new ResizeObserver(misura);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  return (
-    <div ref={ref} className="overflow-auto bg-muted/60 p-4">
-      <div style={{ width: 794 * scala, minHeight: 1123 * scala }} className="mx-auto">
-        <article className="foglio origin-top-left" style={{ transform: `scale(${scala})` }} dangerouslySetInnerHTML={{ __html: html }} />
-      </div>
-    </div>
-  );
-}
-
-function stimaValutazione(v: Valutazione | null, s: Sinistro): number | null {
-  if (!v) return s.importo_richiesto;
-  if (v.importo_proposto != null) return v.importo_proposto;
-  const base = v.importo_base ?? s.importo_richiesto;
-  if (base == null) return null;
-  return Math.round(base * (v.riduzioni ?? []).reduce((acc, r) => acc * (1 - Number(r.percentuale) / 100), 1) * 100) / 100;
 }
 
 export function TabDocumenti({ sinistro: s, voci, valutazione, documenti }: { sinistro: Sinistro; voci: ChecklistVoce[]; valutazione: Valutazione | null; documenti: Documento[] }) {
@@ -60,28 +32,31 @@ export function TabDocumenti({ sinistro: s, voci, valutazione, documenti }: { si
   const [importoDialog, setImportoDialog] = useState(false);
   const [importo, setImporto] = useState<string>("");
 
+  const personalizzati = useQuery({ queryKey: ["modelli-documento"], queryFn: listaModelliDocumento });
+  const htmlPersonalizzati = Object.fromEntries((personalizzati.data ?? []).map((m) => [m.chiave, m.contenuto_html])) as Partial<Record<ChiaveModello, string>>;
+
   const mancanti = voci.filter((v) => !v.completata);
   const positivo = valutazione?.esito === "da_liquidare";
   const generatori: Generatore[] = [
-    { chiave: "avvio", tipi: ["avvio_istruttoria"], titolo: TIPI_DOCUMENTO.avvio_istruttoria, descrizione: "Conferma al richiedente la presa in carico e indica i documenti ancora da produrre.", disponibile: true },
-    { chiave: "integrazione", tipi: ["richiesta_integrazione"], titolo: TIPI_DOCUMENTO.richiesta_integrazione, descrizione: "Sollecita le voci della checklist non ancora acquisite, con termine di 30 giorni.", disponibile: mancanti.length > 0, motivo: "La checklist è completa: non c'è nulla da integrare." },
-    { chiave: "scheda", tipi: ["scheda_danno"], titolo: TIPI_DOCUMENTO.scheda_danno, descrizione: "Scheda interna dell'istruttoria: elementi del danno, documenti acquisiti, relazione tecnica, valutazione ed esito.", disponibile: !!valutazione, motivo: "Serve una valutazione salvata." },
-    { chiave: "quietanza", tipi: ["lettera_quietanza", "atto_quietanza"], titolo: "Quietanza: lettera di invio e atto", descrizione: "Genera insieme la lettera di trasmissione e l'atto di quietanza con importo in lettere e spazio per l'IBAN.", disponibile: positivo, motivo: valutazione ? "L'esito della valutazione è negativo." : "Serve una valutazione con esito positivo." },
-    { chiave: "rigetto", tipi: ["lettera_rigetto"], titolo: TIPI_DOCUMENTO.lettera_rigetto, descrizione: "Comunica il diniego con la relazione tecnica e le motivazioni emerse dalla valutazione.", disponibile: valutazione?.esito === "non_liquidare", motivo: valutazione ? "L'esito della valutazione è positivo." : "Serve una valutazione con esito negativo." },
+    { chiave: "avvio", modelli: ["avvio_istruttoria"], titolo: TIPI_DOCUMENTO.avvio_istruttoria, descrizione: "Conferma al richiedente la presa in carico e indica i documenti ancora da produrre.", disponibile: true },
+    { chiave: "integrazione", modelli: ["richiesta_integrazione"], titolo: TIPI_DOCUMENTO.richiesta_integrazione, descrizione: "Sollecita le voci della checklist non ancora acquisite, con termine di 30 giorni.", disponibile: mancanti.length > 0, motivo: "La checklist è completa: non c'è nulla da integrare." },
+    { chiave: "scheda", modelli: [positivo ? "scheda_danno" : "scheda_danno_rigetto"], titolo: TIPI_DOCUMENTO.scheda_danno, descrizione: "Scheda interna dell'istruttoria: elementi del danno, documenti acquisiti, relazione tecnica, valutazione ed esito.", disponibile: !!valutazione, motivo: "Serve una valutazione salvata." },
+    { chiave: "quietanza", modelli: ["lettera_quietanza", "atto_quietanza"], titolo: "Quietanza: lettera di invio e atto", descrizione: "Genera insieme la lettera di trasmissione e l'atto di quietanza con importo in lettere e spazio per l'IBAN.", disponibile: positivo, motivo: valutazione ? "L'esito della valutazione è negativo." : "Serve una valutazione con esito positivo." },
+    { chiave: "rigetto", modelli: ["lettera_rigetto"], titolo: TIPI_DOCUMENTO.lettera_rigetto, descrizione: "Comunica il diniego con la relazione tecnica e le motivazioni emerse dalla valutazione.", disponibile: valutazione?.esito === "non_liquidare", motivo: valutazione ? "L'esito della valutazione è positivo." : "Serve una valutazione con esito negativo." },
   ];
 
   const genera = useMutation({
-    mutationFn: async ({ tipi, importo }: { tipi: TipoDocumento[]; importo?: number | null }) => {
+    mutationFn: async ({ modelli, importo }: { modelli: ChiaveModello[]; importo?: number | null }) => {
       const generati: Documento[] = [];
-      for (const tipo of tipi) {
-        const g = generaDocumento(tipo, { ente: ente!, sinistro: s, checklist: voci, valutazione, importo });
-        const doc = await salvaDocumento({ sinistro_id: s.id, ente_id: s.ente_id, tipo, titolo: g.titolo, contenuto_html: g.html, created_by: session!.user.id });
+      for (const chiave of modelli) {
+        const g = generaDocumento(chiave, { ente: ente!, sinistro: s, checklist: voci, valutazione, importo }, htmlPersonalizzati);
+        const doc = await salvaDocumento({ sinistro_id: s.id, ente_id: s.ente_id, tipo: g.tipo, titolo: g.titolo, contenuto_html: g.html, created_by: session!.user.id });
         await registraEvento(s.id, s.ente_id, "documento", `Generato: ${g.titolo}`, session!.user.id);
         generati.push(doc);
       }
-      if (tipi.includes("avvio_istruttoria") && s.stato === "aperto") await aggiornaSinistro(s.id, { stato: "istruttoria" });
-      if (tipi.includes("atto_quietanza")) await aggiornaSinistro(s.id, { stato: "liquidato", importo_liquidato: importo ?? stimaValutazione(valutazione, s) });
-      if (tipi.includes("lettera_rigetto")) await aggiornaSinistro(s.id, { stato: "respinto" });
+      if (modelli.includes("avvio_istruttoria") && s.stato === "aperto") await aggiornaSinistro(s.id, { stato: "istruttoria" });
+      if (modelli.includes("atto_quietanza")) await aggiornaSinistro(s.id, { stato: "liquidato", importo_liquidato: importo ?? stimaValutazione(valutazione, s) });
+      if (modelli.includes("lettera_rigetto")) await aggiornaSinistro(s.id, { stato: "respinto" });
       return generati;
     },
     onSuccess: (docs) => {
@@ -107,14 +82,14 @@ export function TabDocumenti({ sinistro: s, voci, valutazione, documenti }: { si
       setImportoDialog(true);
       return;
     }
-    genera.mutate({ tipi: g.tipi });
+    genera.mutate({ modelli: g.modelli });
   }
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_1.4fr]">
       <section>
         <h2 className="mb-1 text-[15px] font-semibold">Genera</h2>
-        <p className="mb-3 text-[12.5px] text-muted-foreground">Modelli dell'Ufficio Assicurazioni, compilati con l'intestazione dell'Ente e i dati del fascicolo al momento della generazione.</p>
+        <p className="mb-3 text-[12.5px] text-muted-foreground">Compilati dai <Link to="/app/modelli" className="text-primary underline">modelli dell'Ente</Link> con i dati del fascicolo al momento della generazione.</p>
         <ul className="space-y-2">
           {generatori.map((g) => (
             <li key={g.chiave} className={cn("rounded-lg border bg-card px-4 py-3", !g.disponibile && "opacity-60")}>
@@ -185,7 +160,7 @@ export function TabDocumenti({ sinistro: s, voci, valutazione, documenti }: { si
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setImportoDialog(false)}>Annulla</Button>
-            <Button disabled={importo === "" || genera.isPending} onClick={() => { setImportoDialog(false); genera.mutate({ tipi: ["lettera_quietanza", "atto_quietanza"], importo: Number(importo) }); }}>Genera lettera e atto</Button>
+            <Button disabled={importo === "" || genera.isPending} onClick={() => { setImportoDialog(false); genera.mutate({ modelli: ["lettera_quietanza", "atto_quietanza"], importo: Number(importo) }); }}>Genera lettera e atto</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

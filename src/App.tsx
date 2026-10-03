@@ -10,6 +10,7 @@ import Sinistri from "@/pages/app/Sinistri";
 import NuovoSinistro from "@/pages/app/NuovoSinistro";
 import SinistroDettaglio from "@/pages/app/sinistro/SinistroDettaglio";
 import Impostazioni from "@/pages/app/Impostazioni";
+import Modelli from "@/pages/app/Modelli";
 import Stampa from "@/pages/app/Stampa";
 import Utenti from "@/pages/admin/Utenti";
 import Enti from "@/pages/admin/Enti";
@@ -56,6 +57,7 @@ export default function App() {
                 <Route path="sinistri" element={<Sinistri />} />
                 <Route path="sinistri/nuovo" element={<NuovoSinistro />} />
                 <Route path="sinistri/:id" element={<SinistroDettaglio />} />
+                <Route path="modelli" element={<Modelli />} />
                 <Route path="impostazioni" element={<Impostazioni />} />
               </Route>
               <Route

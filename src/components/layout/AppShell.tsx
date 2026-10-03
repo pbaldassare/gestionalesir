@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { Building2, FileStack, LayoutDashboard, LogOut, Menu, Settings2, Users } from "lucide-react";
+import { Building2, FilePenLine, FileStack, LayoutDashboard, LogOut, Menu, Settings2, Users } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 const vociUtente: { a: string; label: string; icona: typeof LayoutDashboard; end?: boolean }[] = [
   { a: "/app", label: "Cruscotto", icona: LayoutDashboard, end: true },
   { a: "/app/sinistri", label: "Sinistri", icona: FileStack },
+  { a: "/app/modelli", label: "Modelli", icona: FilePenLine },
   { a: "/app/impostazioni", label: "Impostazioni", icona: Settings2 },
 ];
 
