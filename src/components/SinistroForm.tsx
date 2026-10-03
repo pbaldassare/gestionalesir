@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CampoLuogo } from "@/components/Mappa";
+import { useAuth } from "@/hooks/useAuth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export type DatiSinistro = Pick<
   Sinistro,
-  | "tipologia" | "data_sinistro" | "ora_sinistro" | "data_denuncia" | "data_ricezione" | "luogo" | "descrizione" | "causa_presunta"
+  | "tipologia" | "data_sinistro" | "ora_sinistro" | "data_denuncia" | "data_ricezione" | "luogo" | "lat" | "lng" | "descrizione" | "causa_presunta"
   | "richiedente_nome" | "richiedente_cf" | "richiedente_indirizzo" | "richiedente_email" | "richiedente_telefono" | "richiedente_pec"
   | "conducente" | "targa" | "patrocinatore" | "testimone"
   | "importo_richiesto" | "note"
@@ -23,6 +25,8 @@ const vuoto: DatiSinistro = {
   data_denuncia: oggiISO(),
   data_ricezione: oggiISO(),
   luogo: "",
+  lat: null,
+  lng: null,
   descrizione: "",
   causa_presunta: null,
   richiedente_nome: "",
@@ -73,6 +77,8 @@ export function SinistroForm({
   etichettaSalva?: string;
   salvataggio?: boolean;
 }) {
+  const { ente } = useAuth();
+  const citta = ente?.citta ?? null;
   const [d, setD] = useState<DatiSinistro>({ ...vuoto, ...iniziale });
   const set = <K extends keyof DatiSinistro>(k: K, v: DatiSinistro[K]) => setD((p) => ({ ...p, [k]: v }));
   const testo = (k: keyof DatiSinistro) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -103,7 +109,12 @@ export function SinistroForm({
           </Campo>
         </div>
         <Campo id="luogo" label="Luogo (via, civico, punto di riferimento)" span2>
-          <Input id="luogo" required value={d.luogo} onChange={(e) => set("luogo", e.target.value)} placeholder="Via Sacco, altezza civico 5, marciapiede lato ovest" />
+          <CampoLuogo
+            valore={d.luogo}
+            punto={d.lat != null && d.lng != null ? { lat: d.lat, lng: d.lng } : null}
+            citta={citta}
+            onChange={(luogo, p) => setD((prev) => ({ ...prev, luogo, lat: p?.lat ?? null, lng: p?.lng ?? null }))}
+          />
         </Campo>
         <Campo id="descrizione" label="Descrizione del fatto" span2>
           <Textarea id="descrizione" required rows={4} value={d.descrizione} onChange={(e) => set("descrizione", e.target.value)} placeholder="Dinamica dichiarata dal richiedente, danni lamentati, eventuali testimoni." />

@@ -61,6 +61,8 @@ export interface Sinistro {
   data_denuncia: string;
   data_ricezione: string;
   luogo: string;
+  lat: number | null;
+  lng: number | null;
   descrizione: string;
   causa_presunta: string | null;
   richiedente_nome: string;

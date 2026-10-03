@@ -4,6 +4,8 @@ import { aggiornaSinistro, listaEventi, registraEvento } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { dataIt, euro } from "@/lib/format";
 import { TIPOLOGIE, type Sinistro } from "@/lib/types";
+import { MappaLuogo } from "@/components/Mappa";
+import { linkGoogleMaps } from "@/lib/maps";
 import { SinistroForm, type DatiSinistro } from "@/components/SinistroForm";
 
 function Riga({ etichetta, valore, mono }: { etichetta: string; valore: React.ReactNode; mono?: boolean }) {
@@ -51,6 +53,15 @@ export function TabFascicolo({ sinistro: s, modifica, onFineModifica }: { sinist
           <Riga etichetta="Tipologia" valore={TIPOLOGIE[s.tipologia]} />
           <Riga etichetta="Data e ora" valore={`${dataIt(s.data_sinistro)}${s.ora_sinistro ? " · " + s.ora_sinistro.slice(0, 5) : ""}`} mono />
           <Riga etichetta="Luogo" valore={s.luogo} />
+          {s.lat != null && s.lng != null && (
+            <div className="border-b py-3">
+              <MappaLuogo punto={{ lat: s.lat, lng: s.lng }} className="h-52" />
+              <div className="mt-1.5 flex items-center justify-between text-[12px] text-muted-foreground">
+                <span className="font-mono">{s.lat.toFixed(5)}, {s.lng.toFixed(5)}</span>
+                <a className="text-primary underline" href={linkGoogleMaps({ lat: s.lat, lng: s.lng })} target="_blank" rel="noreferrer">Apri in Google Maps</a>
+              </div>
+            </div>
+          )}
           <Riga etichetta="Descrizione" valore={<span className="whitespace-pre-wrap">{s.descrizione}</span>} />
           <Riga etichetta="Causa presunta" valore={s.causa_presunta} />
         </section>
