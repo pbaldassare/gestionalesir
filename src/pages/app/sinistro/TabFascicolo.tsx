@@ -3,7 +3,8 @@ import { toast } from "sonner";
 import { aggiornaSinistro, listaEventi, registraEvento } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { dataIt, euro } from "@/lib/format";
-import { TIPOLOGIE, type Sinistro } from "@/lib/types";
+import { FLUSSI, TIPOLOGIE, type Sinistro } from "@/lib/types";
+import { listaPolizze } from "@/lib/api";
 import { MappaLuogo } from "@/components/Mappa";
 import { linkGoogleMaps } from "@/lib/maps";
 import { SinistroForm, type DatiSinistro } from "@/components/SinistroForm";
@@ -21,6 +22,8 @@ export function TabFascicolo({ sinistro: s, modifica, onFineModifica }: { sinist
   const qc = useQueryClient();
   const { session } = useAuth();
   const eventi = useQuery({ queryKey: ["eventi", s.id], queryFn: () => listaEventi(s.id) });
+  const polizze = useQuery({ queryKey: ["polizze"], queryFn: listaPolizze, enabled: !!s.polizza_id });
+  const polizza = polizze.data?.find((p) => p.id === s.polizza_id);
 
   const salva = useMutation({
     mutationFn: async (d: DatiSinistro) => {
@@ -48,6 +51,14 @@ export function TabFascicolo({ sinistro: s, modifica, onFineModifica }: { sinist
   return (
     <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
       <div className="space-y-5">
+        <section className="rounded-lg border bg-card px-5 py-3">
+          <h2 className="mb-1 text-[15px] font-semibold">Pratica</h2>
+          <Riga etichetta="Numero interno" valore={s.numero_protocollo} mono />
+          <Riga etichetta="Flusso" valore={FLUSSI[s.flusso]} />
+          {s.flusso === "polizza" && <Riga etichetta="Polizza" valore={polizza ? <><span className="font-mono">{polizza.numero}</span> · {polizza.nome}{polizza.compagnia ? <span className="text-muted-foreground"> ({polizza.compagnia})</span> : null}</> : s.polizza_id ? "…" : null} />}
+          <Riga etichetta="Prot. prec. n." valore={s.protocollo_precedente} mono />
+          <Riga etichetta="Relazione tecnica" valore={s.richiesta_relazione_il ? <>richiesta il <span className="font-mono">{dataIt(s.richiesta_relazione_il)}</span></> : <span className="text-muted-foreground">non ancora richiesta</span>} />
+        </section>
         <section className="rounded-lg border bg-card px-5 py-3">
           <h2 className="mb-1 text-[15px] font-semibold">Evento</h2>
           <Riga etichetta="Tipologia" valore={TIPOLOGIE[s.tipologia]} />

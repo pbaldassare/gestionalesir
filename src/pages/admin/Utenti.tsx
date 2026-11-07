@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { chiamaAdmin, listaEnti, listaProfili } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { dataIt } from "@/lib/format";
-import type { Profilo, Ruolo } from "@/lib/types";
+import { RUOLI, type Profilo, type Ruolo } from "@/lib/types";
 import { Intestazione } from "@/components/layout/Intestazione";
 import { Caricamento } from "@/components/layout/Caricamento";
 import { Button } from "@/components/ui/button";
@@ -93,7 +93,7 @@ export default function Utenti() {
                     <div className="font-medium">{p.nome_completo}{p.id === me?.id && <span className="ml-2 eyebrow">tu</span>}</div>
                     <div className="text-[12.5px] text-muted-foreground">{p.email}</div>
                   </TableCell>
-                  <TableCell className="font-mono text-[12px] uppercase tracking-wider">{p.ruolo}</TableCell>
+                  <TableCell className="text-[13px]">{RUOLI[p.ruolo]}</TableCell>
                   <TableCell className="text-[13px]">{p.ruolo === "admin" ? <span className="text-muted-foreground">—</span> : nomeEnte(p.ente_id)}</TableCell>
                   <TableCell className="hidden font-mono text-[12px] text-muted-foreground md:table-cell">{p.ultimo_accesso ? dataIt(p.ultimo_accesso, true) : "mai"}</TableCell>
                   <TableCell>
@@ -132,10 +132,10 @@ export default function Utenti() {
                 <Label htmlFor="r">Ruolo</Label>
                 <Select value={form.ruolo} onValueChange={(v) => setForm({ ...form, ruolo: v as Ruolo })}>
                   <SelectTrigger id="r"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="utente">Utente di un ente</SelectItem><SelectItem value="admin">Amministratore</SelectItem></SelectContent>
+                  <SelectContent><SelectItem value="utente">Ufficio sinistri di un ente</SelectItem><SelectItem value="tecnico">Tecnico (Ufficio Strade) di un ente</SelectItem><SelectItem value="admin">Amministratore</SelectItem></SelectContent>
                 </Select>
               </div>
-              {form.ruolo === "utente" && (
+              {form.ruolo !== "admin" && (
                 <div className="space-y-1.5">
                   <Label htmlFor="ente">Ente</Label>
                   <Select value={form.ente_id} onValueChange={(v) => setForm({ ...form, ente_id: v })}>
@@ -154,7 +154,7 @@ export default function Utenti() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setNuovo(false)}>Annulla</Button>
-              <Button type="submit" disabled={crea.isPending || (form.ruolo === "utente" && !form.ente_id)}>{crea.isPending ? "Creazione" : "Crea utente"}</Button>
+              <Button type="submit" disabled={crea.isPending || (form.ruolo !== "admin" && !form.ente_id)}>{crea.isPending ? "Creazione" : "Crea utente"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

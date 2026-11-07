@@ -14,17 +14,22 @@ import Modelli from "@/pages/app/Modelli";
 import Stampa from "@/pages/app/Stampa";
 import Utenti from "@/pages/admin/Utenti";
 import Enti from "@/pages/admin/Enti";
+import RichiesteTecnico from "@/pages/tecnico/Richieste";
+import RelazioneTecnico from "@/pages/tecnico/Relazione";
+import type { Ruolo } from "@/lib/types";
 import { Caricamento } from "@/components/layout/Caricamento";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 15_000, retry: 1, refetchOnWindowFocus: false } },
 });
 
-function Protetto({ ruolo, children }: { ruolo?: "admin" | "utente"; children: React.ReactNode }) {
+const homeDi = (r: Ruolo) => (r === "admin" ? "/admin/utenti" : r === "tecnico" ? "/tecnico" : "/app");
+
+function Protetto({ ruoli, children }: { ruoli?: Ruolo[]; children: React.ReactNode }) {
   const { session, profilo, caricamento } = useAuth();
   if (caricamento) return <Caricamento pieno />;
   if (!session || !profilo) return <Navigate to="/accedi" replace />;
-  if (ruolo && profilo.ruolo !== ruolo) return <Navigate to={profilo.ruolo === "admin" ? "/admin/utenti" : "/"} replace />;
+  if (ruoli && !ruoli.includes(profilo.ruolo)) return <Navigate to={homeDi(profilo.ruolo)} replace />;
   return <>{children}</>;
 }
 
@@ -32,7 +37,7 @@ function Home() {
   const { profilo, caricamento, session } = useAuth();
   if (caricamento) return <Caricamento pieno />;
   if (!session || !profilo) return <Navigate to="/accedi" replace />;
-  return <Navigate to={profilo.ruolo === "admin" ? "/admin/utenti" : "/app"} replace />;
+  return <Navigate to={homeDi(profilo.ruolo)} replace />;
 }
 
 export default function App() {
@@ -48,7 +53,7 @@ export default function App() {
               <Route
                 path="/app"
                 element={
-                  <Protetto ruolo="utente">
+                  <Protetto ruoli={["utente"]}>
                     <AppShell />
                   </Protetto>
                 }
@@ -63,16 +68,28 @@ export default function App() {
               <Route
                 path="/app/stampa/:id"
                 element={
-                  <Protetto ruolo="utente">
+                  <Protetto ruoli={["utente", "tecnico"]}>
                     <Stampa />
                   </Protetto>
                 }
               />
 
               <Route
+                path="/tecnico"
+                element={
+                  <Protetto ruoli={["tecnico"]}>
+                    <AppShell />
+                  </Protetto>
+                }
+              >
+                <Route index element={<RichiesteTecnico />} />
+                <Route path="sinistri/:id" element={<RelazioneTecnico />} />
+              </Route>
+
+              <Route
                 path="/admin"
                 element={
-                  <Protetto ruolo="admin">
+                  <Protetto ruoli={["admin"]}>
                     <AppShell />
                   </Protetto>
                 }

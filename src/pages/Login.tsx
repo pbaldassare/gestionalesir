@@ -18,7 +18,7 @@ export default function Login() {
   }, [errore]);
 
   if (!caricamento && session && profilo) {
-    return <Navigate to={profilo.ruolo === "admin" ? "/admin/utenti" : "/app"} replace />;
+    return <Navigate to={profilo.ruolo === "admin" ? "/admin/utenti" : profilo.ruolo === "tecnico" ? "/tecnico" : "/app"} replace />;
   }
 
   async function onSubmit(e: FormEvent) {

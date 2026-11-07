@@ -1,20 +1,23 @@
 # Gestionale SIR — gestione sinistri per enti
 
-Piccolo gestionale a due livelli:
+Piccolo gestionale a tre ruoli:
 
 - **Admin**: crea gli enti e gli utenti. Non fa altro.
-- **Utente di un ente** (il primo è il Comune di Varese): registra i sinistri, segue la checklist documentale, applica i parametri di valutazione dell'ente, genera report e lettere.
+- **Ufficio sinistri di un ente** (il primo è il Comune di Varese): registra i sinistri, segue la checklist documentale, applica i parametri di valutazione dell'ente, genera report e lettere.
+- **Tecnico (Ufficio Strade)**: vede solo i sinistri per cui l'ufficio ha inviato la richiesta di relazione tecnica, consulta fascicolo e foto, carica foto del sopralluogo e genera la relazione precompilata.
+
+Ogni sinistro ha un **numero interno** nel formato dell'ufficio (`0001/26`), proposto in automatico o scritto a mano, e un **flusso**: *sotto soglia (SIR)*, gestito e liquidato dall'ente, oppure *in polizza*, collegato a una polizza scelta dall'elenco con numero e nome (Impostazioni → Polizze).
 
 Un'unica pagina di accesso (`/accedi`): il ruolo decide dove si entra.
 
 ## Flusso di lavoro di un sinistro
 
-1. **Fascicolo** — registrazione della richiesta di risarcimento; il protocollo `SIR-<anno>-<progressivo>` viene assegnato dal database.
+1. **Fascicolo** — registrazione della richiesta di risarcimento; il numero interno, se non indicato, viene assegnato dal database.
 2. **Checklist** — generata dal modello dell'ente (voci generali + voci della tipologia); spunte, note e allegati per voce.
 3. **Valutazione** — i parametri configurabili danno un punteggio; alcune risposte sono *ostative*. Esito **da liquidare** se nessuna condizione ostativa è scattata e il punteggio raggiunge la soglia dell'ente.
-4. **Documenti** — ricalcati sui modelli dell'Ufficio Assicurazioni del Comune di Varese: avvio istruttoria, richiesta di integrazione, **scheda danno** (accoglimento o rigetto), **lettera di invio quietanza** + **atto di quietanza** (importo in lettere, caselle IBAN), comunicazione di rigetto. Anteprima in app e pagina di stampa/PDF (`/app/stampa/:id`).
+4. **Documenti** — su carta intestata (stemma e piè di pagina caricati in Impostazioni → Ente), ricalcati sui modelli dell'Ufficio Assicurazioni del Comune di Varese: avvio istruttoria, richiesta di integrazione, **scheda danno** (accoglimento o rigetto), **lettera di invio quietanza** + **atto di quietanza** (importo in lettere, caselle IBAN), comunicazione di rigetto, **richiesta di relazione tecnica** all'Area Attività Strade e **relazione tecnica** del tecnico. Anteprima in app e pagina di stampa/PDF (`/app/stampa/:id`).
 
-Il numero di pratica segue il formato dell'ufficio (`26/001`, "Ns. rif. n."). La valutazione comprende i testi della scheda danno (iter istruttorio, relazione del settore tecnico, verbale delle autorità) e la quantificazione: imponibile riconosciuto meno le riduzioni (evitabilità 30%, degrado d'uso 20%, altre) → stima attribuita al danno.
+Il numero di pratica compare nei documenti come "Ns. rif. n.". La valutazione comprende i testi della scheda danno (iter istruttorio, relazione del settore tecnico, verbale delle autorità) e la quantificazione: imponibile riconosciuto meno le riduzioni (evitabilità 30%, degrado d'uso 20%, altre) → stima attribuita al danno.
 
 **Modelli modificabili**: la pagina *Modelli* (`/app/modelli`) permette a ogni ente di vedere, modificare e ripristinare i testi dei documenti. I campi `{{...}}` (mostrati come etichette nell'editor) vengono riempiti con i dati del fascicolo; i predefiniti stanno in `src/lib/modelli.ts`, le personalizzazioni nella tabella `modelli_documento`.
 

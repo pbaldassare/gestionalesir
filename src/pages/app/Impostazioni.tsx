@@ -1,12 +1,12 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { GripVertical, ImageUp, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { aggiornaEnte, eliminaModello, eliminaParametro, listaModelli, listaParametri, salvaModello, salvaParametro } from "@/lib/api";
+import { aggiornaEnte, eliminaModello, eliminaParametro, eliminaPolizza, listaModelli, listaParametri, listaPolizze, salvaModello, salvaParametro, salvaPolizza } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { maxParametro } from "@/lib/valutazione";
-import { TIPOLOGIE, type ChecklistModello, type ConfigParametro, type Ente, type OpzioneScelta, type Parametro, type TipoParametro, type Tipologia } from "@/lib/types";
+import { TIPOLOGIE, type ChecklistModello, type ConfigParametro, type Ente, type OpzioneScelta, type Parametro, type Polizza, type TipoParametro, type Tipologia } from "@/lib/types";
 import { Intestazione } from "@/components/layout/Intestazione";
 import { Caricamento } from "@/components/layout/Caricamento";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,19 @@ import { cn } from "@/lib/utils";
 function SezioneEnte() {
   const { ente, ricaricaEnte } = useAuth();
   const [d, setD] = useState<Partial<Ente>>(ente ?? {});
+  const logoRef = useRef<HTMLInputElement>(null);
+  function caricaLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 400_000) {
+      toast.error("Immagine troppo grande", { description: "Usa un file sotto i 400 KB." });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setD((p) => ({ ...p, logo_data_url: String(reader.result) }));
+    reader.readAsDataURL(file);
+  }
   const m = useMutation({
     mutationFn: () => aggiornaEnte(ente!.id, d),
     onSuccess: async () => { await ricaricaEnte(); toast.success("Dati dell'Ente salvati"); },
@@ -59,12 +72,34 @@ function SezioneEnte() {
       </section>
       <section className="rounded-lg border bg-card">
         <div className="border-b px-5 py-3">
+          <h2 className="text-[15px] font-semibold">Carta intestata</h2>
+          <p className="text-[12.5px] text-muted-foreground">Lo stemma va in testa a ogni documento; il piè di pagina, se vuoto, viene composto dai dati qui sopra.</p>
+        </div>
+        <div className="grid gap-4 px-5 py-5 sm:grid-cols-[220px_1fr]">
+          <div className="space-y-2">
+            <Label>Stemma / intestazione</Label>
+            <div className="flex h-28 items-center justify-center overflow-hidden rounded border bg-white p-2">
+              {d.logo_data_url ? <img src={d.logo_data_url} alt="Intestazione" className="max-h-full max-w-full object-contain" /> : <span className="text-[12px] text-muted-foreground">Nessuna immagine</span>}
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => logoRef.current?.click()}><ImageUp className="mr-1.5 h-4 w-4" /> Carica</Button>
+              {d.logo_data_url && <Button type="button" variant="ghost" size="sm" onClick={() => setD((p) => ({ ...p, logo_data_url: null }))}>Rimuovi</Button>}
+            </div>
+            <input ref={logoRef} type="file" accept="image/png,image/jpeg,image/svg+xml" className="hidden" onChange={caricaLogo} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="piede">Piè di pagina (facoltativo)</Label>
+            <Textarea id="piede" rows={4} value={d.piede_pagina ?? ""} onChange={(e) => setD((p) => ({ ...p, piede_pagina: e.target.value || null }))} placeholder="Lascia vuoto per usare denominazione, sede, C.F., email, PEC, telefono e sito indicati sopra." />
+          </div>
+        </div>
+      </section>
+      <section className="rounded-lg border bg-card">
+        <div className="border-b px-5 py-3">
           <h2 className="text-[15px] font-semibold">Copertura assicurativa e soglia</h2>
           <p className="text-[12.5px] text-muted-foreground">La soglia è la percentuale minima del punteggio di valutazione perché un sinistro risulti da liquidare.</p>
         </div>
         <div className="grid gap-4 px-5 py-5 sm:grid-cols-2">
-          {campo("compagnia_assicurativa", "Compagnia assicurativa")}
-          {campo("numero_polizza", "Numero di polizza")}
+          {campo("compagnia_assicurativa", "Compagnia assicurativa di riferimento")}
           {campo("franchigia", "Franchigia (€)", { type: "number", step: "0.01", min: 0 })}
           {campo("soglia_liquidazione", "Soglia di liquidabilità (%)", { type: "number", min: 0, max: 100, required: true })}
         </div>
@@ -276,19 +311,74 @@ function SezioneChecklist() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Polizze
+// ---------------------------------------------------------------------------
+function SezionePolizze() {
+  const { ente } = useAuth();
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ["polizze"], queryFn: listaPolizze });
+  const [nuova, setNuova] = useState({ numero: "", nome: "", compagnia: "" });
+  const inv = () => qc.invalidateQueries({ queryKey: ["polizze"] });
+  const salva = useMutation({ mutationFn: (p: Partial<Polizza> & { ente_id: string }) => salvaPolizza(p), onSuccess: inv, onError: (e: Error) => toast.error(e.message) });
+  const elimina = useMutation({
+    mutationFn: eliminaPolizza,
+    onSuccess: inv,
+    onError: () => toast.error("Polizza non eliminata", { description: "Se è collegata a dei sinistri, disattivala invece di eliminarla." }),
+  });
+
+  if (q.isLoading) return <Caricamento />;
+  const lista = q.data ?? [];
+
+  return (
+    <div className="max-w-3xl">
+      <p className="mb-4 max-w-lg text-[13px] text-muted-foreground">Le polizze tra cui scegliere quando un sinistro è gestito in polizza. Numero e nome compaiono nel fascicolo e nei documenti.</p>
+      <div className="mb-4 grid gap-2 rounded-lg border bg-card p-3 sm:grid-cols-[160px_1fr_1fr_auto]">
+        <Input className="font-mono" placeholder="Numero" value={nuova.numero} onChange={(e) => setNuova({ ...nuova, numero: e.target.value })} />
+        <Input placeholder="Nome della polizza (es. RCT/RCO)" value={nuova.nome} onChange={(e) => setNuova({ ...nuova, nome: e.target.value })} />
+        <Input placeholder="Compagnia (facoltativa)" value={nuova.compagnia} onChange={(e) => setNuova({ ...nuova, compagnia: e.target.value })} />
+        <Button
+          disabled={!nuova.numero.trim() || !nuova.nome.trim() || salva.isPending}
+          onClick={() => {
+            salva.mutate({ ente_id: ente!.id, numero: nuova.numero.trim(), nome: nuova.nome.trim(), compagnia: nuova.compagnia.trim() || null, ordine: (lista.at(-1)?.ordine ?? 0) + 10 });
+            setNuova({ numero: "", nome: "", compagnia: "" });
+          }}
+        >
+          <Plus className="mr-1 h-4 w-4" /> Aggiungi
+        </Button>
+      </div>
+      <ul className="divide-y rounded-lg border bg-card">
+        {lista.map((p) => (
+          <li key={p.id} className={cn("flex items-center gap-3 px-4 py-2.5", !p.attiva && "opacity-50")}>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13.5px] font-medium"><span className="mr-2 font-mono">{p.numero}</span>{p.nome}</div>
+              {p.compagnia && <div className="text-[12px] text-muted-foreground">{p.compagnia}</div>}
+            </div>
+            <Switch checked={p.attiva} onCheckedChange={(v) => salva.mutate({ id: p.id, ente_id: p.ente_id, attiva: v })} aria-label="Attiva" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => elimina.mutate(p.id)} aria-label="Elimina"><Trash2 className="h-4 w-4" /></Button>
+          </li>
+        ))}
+        {lista.length === 0 && <li className="px-4 py-8 text-center text-[13px] text-muted-foreground">Nessuna polizza inserita.</li>}
+      </ul>
+    </div>
+  );
+}
+
 export default function Impostazioni() {
   const [params, setParams] = useSearchParams();
   const tab = params.get("tab") ?? "ente";
   return (
     <>
-      <Intestazione eyebrow="Configurazione" titolo="Impostazioni" descrizione="Intestazione dei documenti, criteri di valutazione e modello di checklist dell'Ente." />
+      <Intestazione eyebrow="Configurazione" titolo="Impostazioni" descrizione="Carta intestata, polizze, criteri di valutazione e modello di checklist dell'Ente." />
       <Tabs value={tab} onValueChange={(v) => setParams({ tab: v })}>
         <TabsList className="mb-6">
           <TabsTrigger value="ente">Ente</TabsTrigger>
+          <TabsTrigger value="polizze">Polizze</TabsTrigger>
           <TabsTrigger value="parametri">Parametri di valutazione</TabsTrigger>
           <TabsTrigger value="checklist">Modello di checklist</TabsTrigger>
         </TabsList>
         <TabsContent value="ente"><SezioneEnte /></TabsContent>
+        <TabsContent value="polizze"><SezionePolizze /></TabsContent>
         <TabsContent value="parametri"><SezioneParametri /></TabsContent>
         <TabsContent value="checklist"><SezioneChecklist /></TabsContent>
       </Tabs>

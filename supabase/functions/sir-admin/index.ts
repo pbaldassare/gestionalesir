@@ -50,11 +50,11 @@ Deno.serve(async (req) => {
         const email = String(body.email ?? "").trim().toLowerCase();
         const password = String(body.password ?? "");
         const nome = String(body.nome_completo ?? "").trim();
-        const ruolo = body.ruolo === "admin" ? "admin" : "utente";
-        const ente_id = ruolo === "utente" ? String(body.ente_id ?? "") : null;
+        const ruolo = body.ruolo === "admin" ? "admin" : body.ruolo === "tecnico" ? "tecnico" : "utente";
+        const ente_id = ruolo === "admin" ? null : String(body.ente_id ?? "");
         if (!email || !password || !nome) return json({ error: "Email, password e nome sono obbligatori" }, 400);
         if (password.length < 8) return json({ error: "La password deve avere almeno 8 caratteri" }, 400);
-        if (ruolo === "utente" && !ente_id) return json({ error: "Seleziona l'ente dell'utente" }, 400);
+        if (ruolo !== "admin" && !ente_id) return json({ error: "Seleziona l'ente dell'utente" }, 400);
 
         const { data: created, error } = await admin.auth.admin.createUser({
           email,

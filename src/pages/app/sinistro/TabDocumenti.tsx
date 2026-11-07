@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, FileText, Printer, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { aggiornaSinistro, eliminaDocumento, listaModelliDocumento, registraEvento, salvaDocumento } from "@/lib/api";
+import { aggiornaSinistro, eliminaDocumento, listaModelliDocumento, listaPolizze, registraEvento, salvaDocumento } from "@/lib/api";
 import { stimaValutazione, type ChiaveModello } from "@/lib/modelli";
 import { generaDocumento } from "@/lib/documenti";
 import { useAuth } from "@/hooks/useAuth";
@@ -35,11 +35,15 @@ export function TabDocumenti({ sinistro: s, voci, valutazione, documenti }: { si
   const personalizzati = useQuery({ queryKey: ["modelli-documento"], queryFn: listaModelliDocumento });
   const htmlPersonalizzati = Object.fromEntries((personalizzati.data ?? []).map((m) => [m.chiave, m.contenuto_html])) as Partial<Record<ChiaveModello, string>>;
 
+  const polizze = useQuery({ queryKey: ["polizze"], queryFn: listaPolizze, enabled: !!s.polizza_id });
+  const polizza = polizze.data?.find((p) => p.id === s.polizza_id) ?? null;
+
   const mancanti = voci.filter((v) => !v.completata);
   const positivo = valutazione?.esito === "da_liquidare";
   const generatori: Generatore[] = [
     { chiave: "avvio", modelli: ["avvio_istruttoria"], titolo: TIPI_DOCUMENTO.avvio_istruttoria, descrizione: "Conferma al richiedente la presa in carico e indica i documenti ancora da produrre.", disponibile: true },
-    { chiave: "integrazione", modelli: ["richiesta_integrazione"], titolo: TIPI_DOCUMENTO.richiesta_integrazione, descrizione: "Sollecita le voci della checklist non ancora acquisite, con termine di 30 giorni.", disponibile: mancanti.length > 0, motivo: "La checklist è completa: non c'è nulla da integrare." },
+    { chiave: "integrazione", modelli: ["richiesta_integrazione"], titolo: "Richiesta documentazione (RCVT)", descrizione: "Chiede al danneggiato i documenti mancanti della checklist, con termine di 15 giorni.", disponibile: mancanti.length > 0, motivo: "La checklist è completa: non c'è nulla da integrare." },
+    { chiave: "strade", modelli: ["richiesta_relazione_tecnica"], titolo: TIPI_DOCUMENTO.richiesta_relazione_tecnica, descrizione: s.richiesta_relazione_il ? `Già inviata il ${dataIt(s.richiesta_relazione_il)}: puoi generarla di nuovo. I tecnici dell'Ufficio Strade vedono il fascicolo.` : "Trasmette la denuncia all'Area Attività Strade e apre il fascicolo ai tecnici per la relazione.", disponibile: true },
     { chiave: "scheda", modelli: [positivo ? "scheda_danno" : "scheda_danno_rigetto"], titolo: TIPI_DOCUMENTO.scheda_danno, descrizione: "Scheda interna dell'istruttoria: elementi del danno, documenti acquisiti, relazione tecnica, valutazione ed esito.", disponibile: !!valutazione, motivo: "Serve una valutazione salvata." },
     { chiave: "quietanza", modelli: ["lettera_quietanza", "atto_quietanza"], titolo: "Quietanza: lettera di invio e atto", descrizione: "Genera insieme la lettera di trasmissione e l'atto di quietanza con importo in lettere e spazio per l'IBAN.", disponibile: positivo, motivo: valutazione ? "L'esito della valutazione è negativo." : "Serve una valutazione con esito positivo." },
     { chiave: "rigetto", modelli: ["lettera_rigetto"], titolo: TIPI_DOCUMENTO.lettera_rigetto, descrizione: "Comunica il diniego con la relazione tecnica e le motivazioni emerse dalla valutazione.", disponibile: valutazione?.esito === "non_liquidare", motivo: valutazione ? "L'esito della valutazione è positivo." : "Serve una valutazione con esito negativo." },
@@ -49,12 +53,13 @@ export function TabDocumenti({ sinistro: s, voci, valutazione, documenti }: { si
     mutationFn: async ({ modelli, importo }: { modelli: ChiaveModello[]; importo?: number | null }) => {
       const generati: Documento[] = [];
       for (const chiave of modelli) {
-        const g = generaDocumento(chiave, { ente: ente!, sinistro: s, checklist: voci, valutazione, importo }, htmlPersonalizzati);
+        const g = generaDocumento(chiave, { ente: ente!, sinistro: s, checklist: voci, valutazione, importo, polizza }, htmlPersonalizzati);
         const doc = await salvaDocumento({ sinistro_id: s.id, ente_id: s.ente_id, tipo: g.tipo, titolo: g.titolo, contenuto_html: g.html, created_by: session!.user.id });
         await registraEvento(s.id, s.ente_id, "documento", `Generato: ${g.titolo}`, session!.user.id);
         generati.push(doc);
       }
       if (modelli.includes("avvio_istruttoria") && s.stato === "aperto") await aggiornaSinistro(s.id, { stato: "istruttoria" });
+      if (modelli.includes("richiesta_relazione_tecnica")) await aggiornaSinistro(s.id, { richiesta_relazione_il: new Date().toISOString(), ...(s.stato === "aperto" ? { stato: "istruttoria" } : {}) });
       if (modelli.includes("atto_quietanza")) await aggiornaSinistro(s.id, { stato: "liquidato", importo_liquidato: importo ?? stimaValutazione(valutazione, s) });
       if (modelli.includes("lettera_rigetto")) await aggiornaSinistro(s.id, { stato: "respinto" });
       return generati;

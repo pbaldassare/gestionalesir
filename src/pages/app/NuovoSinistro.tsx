@@ -26,9 +26,9 @@ export default function NuovoSinistro() {
       <Intestazione
         eyebrow="Nuovo fascicolo"
         titolo="Registra un sinistro"
-        descrizione="Il numero di protocollo viene assegnato al salvataggio. La checklist documentale sarà generata in base alla tipologia."
+        descrizione="Il numero interno viene proposto al salvataggio se non lo indichi. La checklist documentale sarà generata in base alla tipologia."
       />
-      <SinistroForm onSalva={(d) => m.mutate(d)} onAnnulla={() => navigate(-1)} etichettaSalva="Apri il fascicolo" salvataggio={m.isPending} />
+      <SinistroForm onSalva={(d) => m.mutate(d)} onAnnulla={() => navigate(-1)} etichettaSalva="Apri il fascicolo" salvataggio={m.isPending} nuovo />
     </div>
   );
 }

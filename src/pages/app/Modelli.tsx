@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bold, Code2, Eye, Heading2, Italic, List, PencilLine, Pilcrow, Redo2, RotateCcw, Save, Search, Underline, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { listaModelliDocumento, ripristinaModelloDocumento, salvaModelloDocumento } from "@/lib/api";
-import { CAMPI, MODELLI, MODELLI_PREDEFINITI, campiSconosciuti, componi, contestoEsempio, costruisciVariabili, sanifica, type ChiaveModello } from "@/lib/modelli";
+import { CAMPI, GRUPPI_MODELLI, MODELLI, MODELLI_PREDEFINITI, campiSconosciuti, componi, contestoEsempio, costruisciVariabili, sanifica, type ChiaveModello } from "@/lib/modelli";
 import { useAuth } from "@/hooks/useAuth";
 import { dataIt } from "@/lib/format";
 import { Intestazione } from "@/components/layout/Intestazione";
@@ -227,7 +227,7 @@ export default function Modelli() {
       <div className="grid gap-5 md:grid-cols-[230px_minmax(0,1fr)] 2xl:grid-cols-[250px_minmax(0,1fr)_260px]">
         {/* elenco dei modelli */}
         <nav aria-label="Modelli" className="space-y-4">
-          {(["Istruttoria", "Accoglimento", "Rigetto"] as const).map((g) => (
+          {GRUPPI_MODELLI.map((g) => (
             <div key={g}>
               <div className="eyebrow mb-1.5">{g}</div>
               <ul className="overflow-hidden rounded-lg border bg-card">

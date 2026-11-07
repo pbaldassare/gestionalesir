@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 import type {
-  Allegato, ChecklistModello, ChecklistVoce, Documento, Ente, Evento, Parametro, Profilo, Sinistro, Tipologia, Valutazione,
+  Allegato, Polizza, ChecklistModello, ChecklistVoce, Documento, Ente, Evento, Parametro, Profilo, Sinistro, Tipologia, Valutazione,
 } from "./types";
 
 function lancia<T>(r: { data: T | null; error: { message: string } | null }): T {
@@ -230,4 +230,18 @@ export async function salvaModelloDocumento(enteId: string, chiave: string, cont
 
 export async function ripristinaModelloDocumento(chiave: string) {
   lancia(await supabase.from("modelli_documento").delete().eq("chiave", chiave));
+}
+
+// ---- Polizze ----------------------------------------------------------------
+export async function listaPolizze(): Promise<Polizza[]> {
+  return lancia(await supabase.from("polizze").select("*").order("ordine").order("numero"));
+}
+
+export async function salvaPolizza(p: Partial<Polizza> & { ente_id: string }) {
+  if (p.id) lancia(await supabase.from("polizze").update(p).eq("id", p.id));
+  else lancia(await supabase.from("polizze").insert(p));
+}
+
+export async function eliminaPolizza(id: string) {
+  lancia(await supabase.from("polizze").delete().eq("id", id));
 }

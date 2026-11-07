@@ -1,4 +1,5 @@
-export type Ruolo = "admin" | "utente";
+export type Ruolo = "admin" | "utente" | "tecnico";
+export type Flusso = "sir" | "polizza";
 export type Stato = "aperto" | "istruttoria" | "valutato" | "liquidato" | "respinto" | "archiviato";
 export type Tipologia = "danni_cose" | "lesioni_persone" | "misto";
 export type Esito = "da_liquidare" | "non_liquidare";
@@ -6,6 +7,8 @@ export type TipoParametro = "si_no" | "numero" | "scelta";
 export type TipoDocumento =
   | "avvio_istruttoria"
   | "richiesta_integrazione"
+  | "richiesta_relazione_tecnica"
+  | "relazione_tecnica"
   | "scheda_danno"
   | "lettera_quietanza"
   | "atto_quietanza"
@@ -32,6 +35,8 @@ export interface Ente {
   numero_polizza: string | null;
   franchigia: number | null;
   sito_web: string | null;
+  logo_data_url: string | null;
+  piede_pagina: string | null;
   soglia_liquidazione: number;
   attivo: boolean;
   created_at: string;
@@ -54,6 +59,10 @@ export interface Sinistro {
   anno: number;
   progressivo: number;
   numero_protocollo: string;
+  flusso: Flusso;
+  polizza_id: string | null;
+  protocollo_precedente: string | null;
+  richiesta_relazione_il: string | null;
   stato: Stato;
   tipologia: Tipologia;
   data_sinistro: string;
@@ -82,6 +91,17 @@ export interface Sinistro {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface Polizza {
+  id: string;
+  ente_id: string;
+  numero: string;
+  nome: string;
+  compagnia: string | null;
+  attiva: boolean;
+  ordine: number;
+  created_at: string;
 }
 
 export interface ChecklistModello {
@@ -229,6 +249,8 @@ export const TIPOLOGIE: Record<Tipologia, string> = {
 export const TIPI_DOCUMENTO: Record<TipoDocumento, string> = {
   avvio_istruttoria: "Comunicazione di avvio istruttoria",
   richiesta_integrazione: "Richiesta di integrazione documentale",
+  richiesta_relazione_tecnica: "Richiesta di relazione tecnica",
+  relazione_tecnica: "Relazione tecnica",
   scheda_danno: "Scheda danno",
   lettera_quietanza: "Lettera di invio quietanza",
   atto_quietanza: "Atto di quietanza",
@@ -236,4 +258,15 @@ export const TIPI_DOCUMENTO: Record<TipoDocumento, string> = {
   report_valutazione: "Report di valutazione",
   lettera_liquidazione: "Proposta di liquidazione",
   altro: "Altro documento",
+};
+
+export const FLUSSI: Record<Flusso, string> = {
+  sir: "Sotto soglia (SIR)",
+  polizza: "In polizza",
+};
+
+export const RUOLI: Record<Ruolo, string> = {
+  admin: "Amministratore",
+  utente: "Ufficio sinistri",
+  tecnico: "Tecnico (Ufficio Strade)",
 };

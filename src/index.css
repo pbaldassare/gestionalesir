@@ -128,6 +128,9 @@
   .foglio .sottoscrizione { margin-top: 10mm; font-family: "IBM Plex Sans", sans-serif; font-size: 10.5pt; }
   .foglio .piede { margin-top: 16mm; border-top: 1px solid #14213d; padding-top: 3mm; font-family: "IBM Plex Sans", sans-serif; font-size: 8.5pt; color: #14213d; text-align: center; line-height: 1.5; }
   .foglio .firma .ruolo { margin-top: 1mm; }
+  .foglio .carta { margin: -8mm 0 4mm -2mm; }
+  .foglio .carta img.logo { width: 58mm; height: auto; display: block; }
+  .foglio .data-luogo { margin: 0 0 8mm; }
 
   /* Campi del modello nel foglio modificabile */
   .foglio .campo { display: inline-block; padding: 0 1.6mm; border-radius: 3px; background: hsl(var(--primary) / 0.1); color: hsl(var(--primary)); font-family: "IBM Plex Sans", sans-serif; font-size: 0.82em; font-weight: 500; font-style: normal; line-height: 1.5; white-space: nowrap; cursor: default; user-select: all; }
@@ -143,7 +146,8 @@
 @media print {
   body { background: white; }
   .no-print { display: none !important; }
-  .foglio { box-shadow: none; width: auto; min-height: auto; padding: 0; }
+  .foglio { box-shadow: none; width: auto; min-height: auto; padding: 0 0 22mm; }
+  .foglio .piede { position: fixed; bottom: 0; left: 0; right: 0; margin-top: 0; }
   @page { size: A4; margin: 18mm 18mm 16mm; }
 }
 

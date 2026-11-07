@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { Building2, FilePenLine, FileStack, LayoutDashboard, LogOut, Menu, Settings2, Users } from "lucide-react";
+import { Building2, ClipboardList, FilePenLine, FileStack, LayoutDashboard, LogOut, Menu, Settings2, Users } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -19,9 +19,13 @@ const vociAdmin: { a: string; label: string; icona: typeof LayoutDashboard; end?
   { a: "/admin/enti", label: "Enti", icona: Building2 },
 ];
 
+const vociTecnico: { a: string; label: string; icona: typeof LayoutDashboard; end?: boolean }[] = [
+  { a: "/tecnico", label: "Richieste di relazione", icona: ClipboardList, end: true },
+];
+
 function Navigazione({ onNaviga }: { onNaviga?: () => void }) {
   const { profilo, ente, esci } = useAuth();
-  const voci = profilo?.ruolo === "admin" ? vociAdmin : vociUtente;
+  const voci = profilo?.ruolo === "admin" ? vociAdmin : profilo?.ruolo === "tecnico" ? vociTecnico : vociUtente;
   return (
     <div className="flex h-full flex-col bg-ink text-ink-muted">
       <div className="px-5 pt-6 pb-5">
@@ -31,7 +35,7 @@ function Navigazione({ onNaviga }: { onNaviga?: () => void }) {
           </div>
           <div className="leading-tight">
             <div className="font-serif text-[15px] font-semibold text-white">Gestione sinistri</div>
-            <div className="eyebrow !text-ink-muted/70">{profilo?.ruolo === "admin" ? "Amministrazione" : "Istruttoria"}</div>
+            <div className="eyebrow !text-ink-muted/70">{profilo?.ruolo === "admin" ? "Amministrazione" : profilo?.ruolo === "tecnico" ? "Ufficio Strade" : "Istruttoria"}</div>
           </div>
         </div>
       </div>

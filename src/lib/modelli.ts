@@ -1,13 +1,15 @@
 // Modelli di documento: testo HTML con campi {{segnaposto}} sostituiti al momento della generazione.
 // I predefiniti ricalcano i modelli dell'Ufficio Assicurazioni del Comune di Varese; ogni ente può
 // personalizzarli dalla pagina "Modelli" (tabella gestionalesir.modelli_documento).
-import type { ChecklistVoce, Ente, Sinistro, TipoDocumento, Valutazione } from "./types";
-import { TIPOLOGIE } from "./types";
+import type { ChecklistVoce, Ente, Polizza, Sinistro, TipoDocumento, Valutazione } from "./types";
+import { FLUSSI, TIPOLOGIE } from "./types";
 import { dataEstesa, dataIt, euro, importoInLettere } from "./format";
 
 export type ChiaveModello =
   | "avvio_istruttoria"
   | "richiesta_integrazione"
+  | "richiesta_relazione_tecnica"
+  | "relazione_tecnica"
   | "scheda_danno"
   | "scheda_danno_rigetto"
   | "lettera_quietanza"
@@ -19,12 +21,16 @@ export interface InfoModello {
   tipo: TipoDocumento;
   titolo: string;
   descrizione: string;
-  gruppo: "Istruttoria" | "Accoglimento" | "Rigetto";
+  gruppo: "Istruttoria" | "Ufficio Strade" | "Accoglimento" | "Rigetto";
 }
+
+export const GRUPPI_MODELLI: InfoModello["gruppo"][] = ["Istruttoria", "Ufficio Strade", "Accoglimento", "Rigetto"];
 
 export const MODELLI: InfoModello[] = [
   { chiave: "avvio_istruttoria", tipo: "avvio_istruttoria", titolo: "Comunicazione di avvio istruttoria", descrizione: "Presa in carico e documenti ancora da produrre.", gruppo: "Istruttoria" },
-  { chiave: "richiesta_integrazione", tipo: "richiesta_integrazione", titolo: "Richiesta di integrazione documentale", descrizione: "Sollecito delle voci mancanti della checklist.", gruppo: "Istruttoria" },
+  { chiave: "richiesta_integrazione", tipo: "richiesta_integrazione", titolo: "Richiesta documentazione (RCVT)", descrizione: "Richiesta al danneggiato dei documenti mancanti, con termine di 15 giorni.", gruppo: "Istruttoria" },
+  { chiave: "richiesta_relazione_tecnica", tipo: "richiesta_relazione_tecnica", titolo: "Richiesta di relazione tecnica (Strade)", descrizione: "Trasmissione della denuncia all'Area Attività Strade con richiesta di relazione entro 10 giorni.", gruppo: "Ufficio Strade" },
+  { chiave: "relazione_tecnica", tipo: "relazione_tecnica", titolo: "Relazione tecnica", descrizione: "Compilata dal tecnico dell'Ufficio Strade con i dati del fascicolo. Testo provvisorio in attesa del modello ufficiale.", gruppo: "Ufficio Strade" },
   { chiave: "scheda_danno", tipo: "scheda_danno", titolo: "Scheda di valutazione", descrizione: "Scheda danno con definizione a saldo e stralcio.", gruppo: "Accoglimento" },
   { chiave: "lettera_quietanza", tipo: "lettera_quietanza", titolo: "Lettera invio quietanza", descrizione: "Trasmissione dell'atto di quietanza al danneggiato.", gruppo: "Accoglimento" },
   { chiave: "atto_quietanza", tipo: "atto_quietanza", titolo: "Atto di quietanza", descrizione: "Accettazione transattiva della somma, con IBAN.", gruppo: "Accoglimento" },
@@ -56,7 +62,19 @@ export const CAMPI: Campo[] = [
   { nome: "ente.indirizzo", etichetta: "Indirizzo completo", gruppo: "Ente" },
   { nome: "ente.codice_fiscale", etichetta: "Codice fiscale / P.IVA", gruppo: "Ente" },
   { nome: "ente.sito_web", etichetta: "Sito web", gruppo: "Ente" },
-  { nome: "sinistro.numero", etichetta: "Numero di pratica (Ns. rif.)", gruppo: "Sinistro" },
+  { nome: "sinistro.numero", etichetta: "Numero interno di sinistro (Ns. rif.)", gruppo: "Sinistro" },
+  { nome: "sinistro.protocollo_precedente", etichetta: "Prot. prec. n.", gruppo: "Sinistro" },
+  { nome: "sinistro.flusso", etichetta: "Flusso (sotto soglia / in polizza)", gruppo: "Sinistro" },
+  { nome: "polizza.numero", etichetta: "Numero della polizza", gruppo: "Polizza" },
+  { nome: "polizza.nome", etichetta: "Nome della polizza", gruppo: "Polizza" },
+  { nome: "polizza.compagnia", etichetta: "Compagnia della polizza", gruppo: "Polizza" },
+  { nome: "relazione.tecnico", etichetta: "Nome del tecnico", gruppo: "Relazione tecnica" },
+  { nome: "relazione.data", etichetta: "Data della relazione", gruppo: "Relazione tecnica" },
+  { nome: "relazione.natura_strada", etichetta: "Natura della strada (comunale/privata)", gruppo: "Relazione tecnica" },
+  { nome: "relazione.stato_luoghi", etichetta: "Stato dei luoghi", gruppo: "Relazione tecnica" },
+  { nome: "relazione.nesso", etichetta: "Valutazione del nesso causale", gruppo: "Relazione tecnica" },
+  { nome: "relazione.ripristini", etichetta: "Interventi di ripristino successivi", gruppo: "Relazione tecnica" },
+  { nome: "relazione.conclusioni", etichetta: "Conclusioni", gruppo: "Relazione tecnica" },
   { nome: "sinistro.data", etichetta: "Data del sinistro", gruppo: "Sinistro" },
   { nome: "sinistro.ora", etichetta: "Ora del sinistro", gruppo: "Sinistro" },
   { nome: "sinistro.mese", etichetta: "Mese del sinistro", gruppo: "Sinistro" },
@@ -124,20 +142,61 @@ ${OGGETTO}
 <p>{{blocco.documenti_mancanti}}</p>
 <p>L'intera documentazione dovrà essere inviata al seguente indirizzo email: <strong>{{ente.email}}</strong>, citando sempre il numero di riferimento.</p>
 <p>Cordiali saluti.</p>
-<p>{{blocco.firma}}</p>`,
+<p>{{blocco.firma}}</p>
+<p>{{blocco.piede}}</p>`,
 
   richiesta_integrazione: `<p>{{blocco.intestazione}}</p>
 ${DESTINATARIO}
 ${OGGETTO}
-<p>Gentile utente,</p>
-<p>dall'esame della documentazione trasmessa a corredo della richiesta in oggetto risulta mancante o incompleta la seguente documentazione, necessaria alla definizione della pratica:</p>
+<p>Salvo e impregiudicato ogni rispettivo e reciproco diritto e senza che la presente comunicazione costituisca ammissione di responsabilità alcuna, con riferimento alla domanda risarcitoria di cui all'oggetto, al fine di consentire alla scrivente Amministrazione una corretta istruttoria della pratica, si chiede di fornire, entro 15 giorni dalla data di ricevimento della presente, e qualora non si sia già provveduto, copia della seguente documentazione in Vostro possesso:</p>
 <p>{{blocco.documenti_mancanti}}</p>
-<p>Vi preghiamo di trasmettere quanto sopra entro <strong>30 giorni</strong> dal ricevimento della presente all'indirizzo email <strong>{{ente.email}}</strong>. In mancanza, l'Ufficio procederà alla definizione della pratica sulla base degli atti disponibili.</p>
-<p>Si precisa che l'invio di quanto sopra indicato è strettamente necessario per il corretto perfezionamento e la definizione della pratica.</p>
-<p>Cordiali saluti.</p>
-<p>{{blocco.firma}}</p>`,
+<ul>
+<li>autorizzazione al trattamento dei dati personali, allegata alla presente, debitamente sottoscritta;</li>
+<li>dichiarazioni testimoniali se e in quanto già indicate nel modulo di richiesta danni (con relativo documento d'identità dei testimoni);</li>
+<li>dichiarazione di inesistenza di ulteriori coperture assicurative in ordine al danno de quo;</li>
+<li>ogni altro documento o atto che si ritiene utile a provare l'evento dannoso.</li>
+</ul>
+<p>È possibile, altresì, fornire ogni altro documento che il/la danneggiato/a ritiene utile a provare l'evento dannoso.</p>
+<p>In caso di mancata o incompleta risposta, non potrà darsi seguito alla richiesta di risarcimento.</p>
+<p>Per la successiva gestione della pratica, è operativo l'Ufficio Assicurazioni del {{ente.nome}}, {{ente.indirizzo}}, dal lunedì al venerdì dalle ore 08.30 alle ore 12.00 al seguente riferimento telefonico {{ente.telefono}}.</p>
+<p>È possibile, altresì, inviare mail al seguente indirizzo: {{ente.email}}</p>
+<p>Per ogni comunicazione, telefonica o scritta, dovrà essere sempre fatto riferimento al numero di pratica del sinistro riportato nell'oggetto della presente.</p>
+<p>Distinti saluti.</p>
+<p>{{blocco.firma}}</p>
+<p>{{blocco.piede}}</p>`,
 
-  scheda_danno: `<h1>SCHEDA DANNO</h1>
+  richiesta_relazione_tecnica: `<p>{{blocco.intestazione}}</p>
+<p>Prot. prec. n. {{sinistro.protocollo_precedente}}</p>
+<div class="destinatario">All'AREA X<br/><strong>ATTIVITÀ STRADE</strong></div>
+${OGGETTO}
+<p>Si trasmette la denuncia e la documentazione pervenuta in relazione al sinistro in oggetto, con richiesta di voler produrre allo scrivente Ufficio - entro e non oltre 10 giorni dalla data della presente - una dettagliata relazione in merito alle cause che hanno provocato il sinistro in oggetto, restituendo allo scrivente Ufficio Assicurazioni l'eventuale documentazione fotografica in originale qui allegata.</p>
+<p>Preventivamente andrà accertata la natura comunale o privata della strada.</p>
+<p>In particolare occorre che l'ufficio in indirizzo esamini i documenti e valuti, rispetto alla situazione effettiva dei luoghi, se la stessa è stata determinante per la causazione del danno lamentato. Si chiedono, pertanto, tutte le valutazioni tecniche necessarie che possano essere utilizzate dallo scrivente ufficio al fine di poter correttamente analizzare il sinistro in termini di nesso di causalità tra stato dei luoghi (quindi responsabilità dell'Ente) ed evento dannoso.</p>
+<p>Si invita, a voler precisare se il luogo del sinistro sia stato oggetto di successivi interventi di ripristino, nei casi riferibili a buche stradali.</p>
+<p>Si precisa che l'evasione della presente da parte dell'Area destinataria nei ristretti tempi previsti è assolutamente necessaria, al fine di poter definire la pratica e di evitare un procedimento di contenzioso.</p>
+<p>Distinti saluti.</p>
+<p>{{blocco.firma}}</p>
+<p>{{blocco.piede}}</p>`,
+
+  relazione_tecnica: `<p>{{blocco.intestazione}}</p>
+<div class="destinatario">All'Ufficio Assicurazioni<br/>{{ente.ufficio}}</div>
+<p class="oggetto">Oggetto: relazione tecnica sul sinistro del {{sinistro.data}} in {{sinistro.luogo}} - {{richiedente.con_patrocinio}} - Ns. rif. n. {{sinistro.numero}}.</p>
+<p>In riscontro alla richiesta di relazione, esaminata la documentazione trasmessa ed effettuati gli accertamenti del caso, si relaziona quanto segue.</p>
+<h2>Natura della strada</h2>
+<p>{{relazione.natura_strada}}</p>
+<h2>Stato dei luoghi</h2>
+<p>{{relazione.stato_luoghi}}</p>
+<h2>Nesso tra stato dei luoghi ed evento</h2>
+<p>{{relazione.nesso}}</p>
+<h2>Interventi di ripristino successivi</h2>
+<p>{{relazione.ripristini}}</p>
+<h2>Conclusioni</h2>
+<p>{{relazione.conclusioni}}</p>
+<div class="firma"><div>Area X - Attività Strade</div><div class="ruolo">Il tecnico: {{relazione.tecnico}}</div><div class="ruolo">{{relazione.data}}</div></div>
+<p>{{blocco.piede}}</p>`,
+
+  scheda_danno: `<p>{{blocco.intestazione}}</p>
+<h1>SCHEDA DANNO</h1>
 <p class="progr">N° progr. <strong>{{sinistro.numero}}</strong></p>
 <h2>Elementi identificativi del danno</h2>
 ${TABELLA_ELEMENTI("{{valutazione.stima}}")}
@@ -159,7 +218,8 @@ ${TABELLA_ELEMENTI("{{valutazione.stima}}")}
 </ul>
 <p>{{blocco.firma}}</p>`,
 
-  scheda_danno_rigetto: `<h1>SCHEDA DANNO</h1>
+  scheda_danno_rigetto: `<p>{{blocco.intestazione}}</p>
+<h1>SCHEDA DANNO</h1>
 <p class="progr">N° progr. <strong>{{sinistro.numero}}</strong></p>
 <h2>Elementi identificativi del danno</h2>
 ${TABELLA_ELEMENTI("0")}
@@ -183,7 +243,8 @@ ${OGGETTO}
 <p>L'intera documentazione richiesta dovrà essere inviata al seguente indirizzo email: <strong>{{ente.email}}</strong>.</p>
 <p>Si precisa che l'invio di quanto sopra indicato è strettamente necessario per il corretto perfezionamento e la definizione della pratica.</p>
 <p>Cordiali saluti.</p>
-<p>{{blocco.firma}}</p>`,
+<p>{{blocco.firma}}</p>
+<p>{{blocco.piede}}</p>`,
 
   atto_quietanza: `<h1 class="centro">ATTO DI QUIETANZA</h1>
 <p class="progr">Sinistro n. <strong>{{sinistro.numero}}</strong><br/>Data sinistro: <strong>{{sinistro.data}}</strong></p>
@@ -208,18 +269,30 @@ ${OGGETTO}
 <p>{{blocco.motivazioni}}</p>
 <p>Resta salva la facoltà di produrre, entro 30 giorni dal ricevimento della presente, ulteriori elementi documentali o testimoniali idonei a modificare le conclusioni sopra esposte; in tal caso la pratica sarà riesaminata.</p>
 <p>Cordiali saluti.</p>
-<p>{{blocco.firma}}</p>`,
+<p>{{blocco.firma}}</p>
+<p>{{blocco.piede}}</p>`,
 };
 
 // ---------------------------------------------------------------------------
 // Variabili e composizione
 // ---------------------------------------------------------------------------
+export interface DatiRelazione {
+  tecnico: string;
+  natura_strada: string;
+  stato_luoghi: string;
+  nesso: string;
+  ripristini: string;
+  conclusioni: string;
+}
+
 export interface ContestoDocumento {
   ente: Ente;
   sinistro: Sinistro;
   checklist?: ChecklistVoce[];
   valutazione?: Valutazione | null;
   importo?: number | null;
+  polizza?: Polizza | null;
+  relazione?: DatiRelazione | null;
 }
 
 const esc = (v: unknown): string =>
@@ -241,9 +314,13 @@ export function stimaValutazione(v: Valutazione | null | undefined, s: Sinistro)
 const MESI = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
 
 /** Valori già pronti per l'HTML: i testi sono sottoposti a escape, i blocchi sono HTML. */
-export function costruisciVariabili({ ente, sinistro: s, checklist = [], valutazione: v, importo }: ContestoDocumento): Record<string, string> {
+export function costruisciVariabili({ ente, sinistro: s, checklist = [], valutazione: v, importo, polizza, relazione }: ContestoDocumento): Record<string, string> {
   const righeUfficio = (ente.ufficio ?? "Ufficio Sinistri").split(/\s[–-]\s/);
   const sede = [ente.indirizzo, [ente.cap, ente.citta].filter(Boolean).join(" ")].filter(Boolean).join(" - ");
+  const dataOggi = esc(dataEstesa(new Date().toISOString()));
+  const intestazioneTesto = `<div class="intestazione"><div><div class="ente">${esc(ente.nome)}</div><div class="ufficio">${righeUfficio.map(esc).join("<br/>")}</div></div><div class="meta">${esc(ente.citta ?? "")}, ${dataOggi}</div></div>`;
+  const intestazioneLogo = `<div class="carta"><img class="logo" src="${ente.logo_data_url ?? ""}" alt="${esc(ente.nome)}"/></div><p class="data-luogo">${esc(ente.citta ?? "")}, ${dataOggi}</p>`;
+  const piedeAutomatico = `<strong>${esc(ente.nome).toUpperCase()}</strong>${sede ? " - " + esc(sede) : ""}${ente.codice_fiscale ? " - C.F./P.IVA " + esc(ente.codice_fiscale) : ""}<br/>${esc([ente.email, ente.pec].filter(Boolean).join(" - "))}<br/>${esc([ente.telefono ? "tel. " + ente.telefono : "", ente.sito_web].filter(Boolean).join(" - "))}`;
   const stima = importo ?? stimaValutazione(v, s);
   const conPatrocinio = (s.patrocinatore ? `${s.richiedente_nome} c/o ${s.patrocinatore}` : s.richiedente_nome).toUpperCase();
   const descrizioneBreve = `${s.causa_presunta ? "danni " + (s.tipologia === "lesioni_persone" ? "alla persona" : "materiali") + " a causa di " + s.causa_presunta.toLowerCase() : s.descrizione}${s.targa ? " tg. " + s.targa.toUpperCase() : ""}`;
@@ -264,6 +341,18 @@ export function costruisciVariabili({ ente, sinistro: s, checklist = [], valutaz
     "ente.codice_fiscale": esc(ente.codice_fiscale),
     "ente.sito_web": esc(ente.sito_web),
     "sinistro.numero": esc(s.numero_protocollo),
+    "sinistro.protocollo_precedente": esc(s.protocollo_precedente || "____________"),
+    "sinistro.flusso": esc(FLUSSI[s.flusso ?? "sir"]),
+    "polizza.numero": esc(polizza?.numero),
+    "polizza.nome": esc(polizza?.nome),
+    "polizza.compagnia": esc(polizza?.compagnia),
+    "relazione.tecnico": esc(relazione?.tecnico),
+    "relazione.data": dataOggi,
+    "relazione.natura_strada": nl(relazione?.natura_strada),
+    "relazione.stato_luoghi": nl(relazione?.stato_luoghi),
+    "relazione.nesso": nl(relazione?.nesso),
+    "relazione.ripristini": nl(relazione?.ripristini),
+    "relazione.conclusioni": nl(relazione?.conclusioni),
     "sinistro.data": esc(dataIt(s.data_sinistro)),
     "sinistro.ora": esc(s.ora_sinistro?.slice(0, 5)),
     "sinistro.mese": esc(s.data_sinistro ? MESI[Number(s.data_sinistro.slice(5, 7)) - 1] : ""),
@@ -293,9 +382,9 @@ export function costruisciVariabili({ ente, sinistro: s, checklist = [], valutaz
     "valutazione.soglia": v ? `${v.soglia}%` : "",
     "valutazione.note": nl(v?.note),
     "frase.libretto": veicolo ? " e i documenti dell'auto (libretto di circolazione)" : "",
-    "blocco.intestazione": `<div class="intestazione"><div><div class="ente">${esc(ente.nome)}</div><div class="ufficio">${righeUfficio.map(esc).join("<br/>")}</div></div><div class="meta">${esc(ente.citta ?? "")}, ${esc(dataEstesa(new Date().toISOString()))}</div></div>`,
+    "blocco.intestazione": ente.logo_data_url ? intestazioneLogo : intestazioneTesto,
     "blocco.firma": `<div class="firma"><div>${righeUfficio.map(esc).join("<br/>")}</div><div class="ruolo">(${esc(ente.responsabile ?? "Il Responsabile")})</div></div><div class="nota">Il documento è firmato digitalmente ai sensi del D.Lgs. 82/2005 s.m.i. e norme collegate e sostituisce il documento cartaceo e la firma autografa.</div>`,
-    "blocco.piede": `<div class="piede"><strong>${esc(ente.nome).toUpperCase()}</strong>${sede ? " - " + esc(sede) : ""}${ente.codice_fiscale ? " - C.F./P.IVA " + esc(ente.codice_fiscale) : ""}<br/>${esc(ente.ufficio ?? "")}<br/>${esc([ente.email, ente.pec].filter(Boolean).join(" - "))}<br/>${esc([ente.telefono ? "tel. " + ente.telefono : "", ente.sito_web].filter(Boolean).join(" - "))}</div>`,
+    "blocco.piede": `<div class="piede">${ente.piede_pagina ? nl(ente.piede_pagina) : piedeAutomatico}</div>`,
     "blocco.documenti_acquisiti": acquisiti.length ? `<ul>${acquisiti.map((c) => `<li>${esc(c.titolo.toLowerCase())}${c.note ? " – " + esc(c.note) : ""}</li>`).join("")}</ul>` : "<p>—</p>",
     "blocco.documenti_mancanti": mancanti.length
       ? `<ul>${mancanti.map((c) => `<li>${esc(c.titolo)}${c.obbligatoria ? "" : " <em>(se disponibile)</em>"}${c.descrizione ? " — " + esc(c.descrizione) : ""}</li>`).join("")}</ul>`
@@ -338,7 +427,7 @@ export function campiSconosciuti(html: string): string[] {
 // ---------------------------------------------------------------------------
 export function contestoEsempio(ente: Ente): ContestoDocumento {
   const sinistro = {
-    id: "esempio", ente_id: ente.id, anno: 2026, progressivo: 165, numero_protocollo: "26/165", stato: "valutato", tipologia: "danni_cose",
+    id: "esempio", ente_id: ente.id, anno: 2026, progressivo: 165, numero_protocollo: "0165/26", flusso: "sir", polizza_id: null, protocollo_precedente: "12345", richiesta_relazione_il: null, stato: "valutato", tipologia: "danni_cose",
     data_sinistro: "2026-09-07", ora_sinistro: "16:40:00", data_denuncia: "2026-09-10", data_ricezione: "2026-09-10",
     luogo: "Via Piana di Luco", lat: null, lng: null,
     descrizione: "Danni a pneumatico e cerchio a causa di una buca sulla carreggiata.", causa_presunta: "Una buca",
@@ -365,5 +454,14 @@ export function contestoEsempio(ente: Ente): ContestoDocumento {
     verbale_autorita: "La Polizia Locale, contattata, non è intervenuta sul posto.",
     note: null, created_by: null, created_at: new Date().toISOString(),
   } as Valutazione;
-  return { ente, sinistro, checklist, valutazione };
+  const polizza: Polizza = { id: "esempio", ente_id: ente.id, numero: "123456789", nome: "RCT/RCO Enti pubblici", compagnia: "Compagnia Assicurazioni S.p.A.", attiva: true, ordine: 0, created_at: new Date().toISOString() };
+  const relazione: DatiRelazione = {
+    tecnico: "Geom. Paolo Verdi",
+    natura_strada: "La via è di proprietà comunale e in manutenzione dell'Area X.",
+    stato_luoghi: "Sopralluogo del 12/09/2026: presenza di una buca di circa 40x30 cm e profondità 6 cm sulla corsia di marcia, non segnalata.",
+    nesso: "La posizione dell'anomalia sulla traiettoria di marcia e la sua profondità sono compatibili con il danno lamentato allo pneumatico.",
+    ripristini: "L'anomalia è stata ripristinata con conglomerato a freddo in data 14/09/2026.",
+    conclusioni: "Si ritiene sussistente il nesso tra lo stato dei luoghi e l'evento; si rimette all'Ufficio Assicurazioni ogni valutazione sulla responsabilità.",
+  };
+  return { ente, sinistro, checklist, valutazione, polizza, relazione };
 }

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FileStack, Plus, Search } from "lucide-react";
 import { listaSinistri } from "@/lib/api";
 import { dataIt, euro } from "@/lib/format";
-import { STATI, TIPOLOGIE, type Stato, type Tipologia } from "@/lib/types";
+import { FLUSSI, STATI, TIPOLOGIE, type Flusso, type Stato, type Tipologia } from "@/lib/types";
 import { Intestazione } from "@/components/layout/Intestazione";
 import { Caricamento } from "@/components/layout/Caricamento";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ export default function Sinistri() {
   const [testo, setTesto] = useState("");
   const [stato, setStato] = useState<Stato | "tutti">("tutti");
   const [tipologia, setTipologia] = useState<Tipologia | "tutte">("tutte");
+  const [flusso, setFlusso] = useState<Flusso | "tutti">("tutti");
 
   const filtrati = useMemo(() => {
     const q = testo.trim().toLowerCase();
@@ -27,9 +28,10 @@ export default function Sinistri() {
       (s) =>
         (stato === "tutti" || s.stato === stato) &&
         (tipologia === "tutte" || s.tipologia === tipologia) &&
+        (flusso === "tutti" || s.flusso === flusso) &&
         (!q || [s.numero_protocollo, s.richiedente_nome, s.luogo, s.richiedente_cf ?? ""].some((v) => v.toLowerCase().includes(q))),
     );
-  }, [data, testo, stato, tipologia]);
+  }, [data, testo, stato, tipologia, flusso]);
 
   return (
     <>
@@ -51,6 +53,13 @@ export default function Sinistri() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input className="pl-9" placeholder="Cerca per protocollo, richiedente, luogo o codice fiscale" value={testo} onChange={(e) => setTesto(e.target.value)} />
         </div>
+        <Select value={flusso} onValueChange={(v) => setFlusso(v as Flusso | "tutti")}>
+          <SelectTrigger className="sm:w-44"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="tutti">Tutti i flussi</SelectItem>
+            {(Object.keys(FLUSSI) as Flusso[]).map((k) => <SelectItem key={k} value={k}>{FLUSSI[k]}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Select value={stato} onValueChange={(v) => setStato(v as Stato | "tutti")}>
           <SelectTrigger className="sm:w-48"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -97,7 +106,7 @@ export default function Sinistri() {
                 <TableRow key={s.id} className="cursor-pointer" onClick={() => navigate(`/app/sinistri/${s.id}`)}>
                   <TableCell><Protocollo numero={s.numero_protocollo} /></TableCell>
                   <TableCell>
-                    <div className="font-medium">{s.richiedente_nome}</div>
+                    <div className="font-medium">{s.richiedente_nome}{s.flusso === "polizza" && <span className="ml-2 rounded border border-primary/30 bg-primary/5 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-primary">polizza</span>}</div>
                     <div className="text-[12px] text-muted-foreground md:hidden">{dataIt(s.data_sinistro)} · {s.luogo}</div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">

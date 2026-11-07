@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { aggiornaSinistro, eliminaSinistro, leggiSinistro, listaChecklist, listaDocumenti, registraEvento, ultimaValutazione } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { dataIt, euro } from "@/lib/format";
-import { STATI, TIPOLOGIE, type Stato } from "@/lib/types";
+import { FLUSSI, STATI, TIPOLOGIE, type Stato } from "@/lib/types";
 import { Caricamento } from "@/components/layout/Caricamento";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -89,7 +89,7 @@ export default function SinistroDettaglio() {
             <div className="flex flex-wrap items-center gap-2">
               <span className="protocollo sm:hidden">{s.numero_protocollo}</span>
               <StatoBadge stato={s.stato} />
-              <span className="text-[12.5px] text-muted-foreground">{TIPOLOGIE[s.tipologia]}</span>
+              <span className="text-[12.5px] text-muted-foreground">{TIPOLOGIE[s.tipologia]} · {FLUSSI[s.flusso]}</span>
             </div>
             <h1 className="mt-1.5 text-[26px] font-semibold leading-tight">{s.richiedente_nome}</h1>
             <div className="mt-1 text-[13.5px] text-muted-foreground">
