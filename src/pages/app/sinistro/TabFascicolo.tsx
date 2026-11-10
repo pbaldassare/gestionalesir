@@ -64,6 +64,7 @@ export function TabFascicolo({ sinistro: s, modifica, onFineModifica }: { sinist
           <Riga etichetta="Tipologia" valore={TIPOLOGIE[s.tipologia]} />
           <Riga etichetta="Data e ora" valore={`${dataIt(s.data_sinistro)}${s.ora_sinistro ? " · " + s.ora_sinistro.slice(0, 5) : ""}`} mono />
           <Riga etichetta="Luogo" valore={s.luogo} />
+          <Riga etichetta="Strada del Comune" valore={s.strada_comunale ? "Sì" : "No"} />
           {s.lat != null && s.lng != null && (
             <div className="border-b py-3">
               <MappaLuogo punto={{ lat: s.lat, lng: s.lng }} className="h-52" />
@@ -82,7 +83,7 @@ export function TabFascicolo({ sinistro: s, modifica, onFineModifica }: { sinist
           <Riga etichetta="Codice fiscale" valore={s.richiedente_cf} mono />
           <Riga etichetta="Indirizzo" valore={s.richiedente_indirizzo} />
           <Riga etichetta="Email" valore={s.richiedente_email} />
-          <Riga etichetta="PEC" valore={s.richiedente_pec} />
+          {s.richiedente_pec && <Riga etichetta="PEC" valore={s.richiedente_pec} />}
           <Riga etichetta="Telefono" valore={s.richiedente_telefono} mono />
           <Riga etichetta="Patrocinatore" valore={s.patrocinatore} />
           <Riga etichetta="Teste" valore={s.testimone} />

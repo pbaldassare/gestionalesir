@@ -70,6 +70,7 @@ export interface Sinistro {
   data_denuncia: string;
   data_ricezione: string;
   luogo: string;
+  strada_comunale: boolean;
   lat: number | null;
   lng: number | null;
   descrizione: string;
@@ -100,6 +101,14 @@ export interface Polizza {
   nome: string;
   compagnia: string | null;
   attiva: boolean;
+  ordine: number;
+  created_at: string;
+}
+
+export interface CausaPresunta {
+  id: string;
+  ente_id: string;
+  nome: string;
   ordine: number;
   created_at: string;
 }

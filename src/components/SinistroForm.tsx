@@ -1,5 +1,9 @@
 import { useState, type FormEvent } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { Sinistro } from "@/lib/types";
+import { listaCause } from "@/lib/api";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { TIPOLOGIE } from "@/lib/types";
 import { oggiISO } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -13,11 +17,13 @@ import { cn } from "@/lib/utils";
 export type DatiSinistro = Pick<
   Sinistro,
   | "numero_protocollo" | "flusso" | "polizza_id" | "protocollo_precedente"
-  | "tipologia" | "data_sinistro" | "ora_sinistro" | "data_denuncia" | "data_ricezione" | "luogo" | "lat" | "lng" | "descrizione" | "causa_presunta"
+  | "tipologia" | "data_sinistro" | "ora_sinistro" | "data_denuncia" | "data_ricezione" | "luogo" | "strada_comunale" | "lat" | "lng" | "descrizione" | "causa_presunta"
   | "richiedente_nome" | "richiedente_cf" | "richiedente_indirizzo" | "richiedente_email" | "richiedente_telefono" | "richiedente_pec"
   | "conducente" | "targa" | "patrocinatore" | "testimone"
   | "importo_richiesto" | "note"
 >;
+
+const NESSUNA = "__nessuna__"; // Radix Select non accetta "" come valore
 
 const vuoto: DatiSinistro = {
   numero_protocollo: "",
@@ -28,8 +34,9 @@ const vuoto: DatiSinistro = {
   data_sinistro: oggiISO(),
   ora_sinistro: null,
   data_denuncia: oggiISO(),
-  data_ricezione: oggiISO(),
+  data_ricezione: oggiISO(), // non più nel modulo: resta la data di registrazione (anno del numero interno, timbro, lettere)
   luogo: "",
+  strada_comunale: false,
   lat: null,
   lng: null,
   descrizione: "",
@@ -87,6 +94,10 @@ export function SinistroForm({
   const { ente } = useAuth();
   const citta = ente?.citta ?? null;
   const [d, setD] = useState<DatiSinistro>({ ...vuoto, ...iniziale });
+  const cause = useQuery({ queryKey: ["cause"], queryFn: listaCause });
+  const nomiCause = (cause.data ?? []).map((c) => c.nome);
+  // un sinistro già registrato può avere una causa scritta a mano o poi tolta dall'elenco: resta selezionabile
+  if (d.causa_presunta && !nomiCause.includes(d.causa_presunta)) nomiCause.push(d.causa_presunta);
   const set = <K extends keyof DatiSinistro>(k: K, v: DatiSinistro[K]) => setD((p) => ({ ...p, [k]: v }));
   const testo = (k: keyof DatiSinistro) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     set(k, (e.target.value === "" ? null : e.target.value) as never);
@@ -138,12 +149,23 @@ export function SinistroForm({
             citta={citta}
             onChange={(luogo, p) => setD((prev) => ({ ...prev, luogo, lat: p?.lat ?? null, lng: p?.lng ?? null }))}
           />
+          <label className="flex w-fit cursor-pointer items-center gap-2 pt-1 text-[13.5px]">
+            <Checkbox checked={d.strada_comunale} onCheckedChange={(v) => set("strada_comunale", v === true)} />
+            Strada di proprietà del Comune
+          </label>
         </Campo>
         <Campo id="descrizione" label="Descrizione del fatto" span2>
           <Textarea id="descrizione" required rows={4} value={d.descrizione} onChange={(e) => set("descrizione", e.target.value)} placeholder="Dinamica dichiarata dal richiedente, danni lamentati, eventuali testimoni." />
         </Campo>
         <Campo id="causa" label="Causa presunta" span2>
-          <Input id="causa" value={d.causa_presunta ?? ""} onChange={testo("causa_presunta")} placeholder="Buca sul manto stradale, chiusino dissestato, ramo caduto…" />
+          <Select value={d.causa_presunta ?? NESSUNA} onValueChange={(v) => set("causa_presunta", v === NESSUNA ? null : v)}>
+            <SelectTrigger id="causa"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NESSUNA}>Non indicata</SelectItem>
+              {nomiCause.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {!cause.isLoading && !cause.data?.length && <p className="text-[12px] text-muted-foreground">Nessuna causa: aggiungile in Impostazioni → Cause presunte.</p>}
         </Campo>
       </Sezione>
 
@@ -159,9 +181,6 @@ export function SinistroForm({
         </Campo>
         <Campo id="r_email" label="Email">
           <Input id="r_email" type="email" value={d.richiedente_email ?? ""} onChange={testo("richiedente_email")} />
-        </Campo>
-        <Campo id="r_pec" label="PEC">
-          <Input id="r_pec" type="email" value={d.richiedente_pec ?? ""} onChange={testo("richiedente_pec")} />
         </Campo>
         <Campo id="r_tel" label="Telefono">
           <Input id="r_tel" value={d.richiedente_telefono ?? ""} onChange={testo("richiedente_telefono")} />
@@ -188,11 +207,11 @@ export function SinistroForm({
         <Campo id="data_denuncia" label="Data della denuncia">
           <Input id="data_denuncia" type="date" required value={d.data_denuncia} onChange={(e) => set("data_denuncia", e.target.value)} />
         </Campo>
-        <Campo id="data_ricezione" label="Data di ricezione dall'Ente">
-          <Input id="data_ricezione" type="date" required value={d.data_ricezione} onChange={(e) => set("data_ricezione", e.target.value)} />
-        </Campo>
-        <Campo id="importo" label="Ammontare del danno (€, imponibile da fattura/scontrino)">
-          <Input id="importo" type="number" step="0.01" min="0" className="font-mono" value={d.importo_richiesto ?? ""} onChange={(e) => set("importo_richiesto", e.target.value === "" ? null : Number(e.target.value))} />
+        <Campo id="importo" label="Ammontare del danno (imponibile da fattura/scontrino)">
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13.5px] text-muted-foreground">€</span>
+            <Input id="importo" type="number" step="0.01" min="0" inputMode="decimal" placeholder="0,00" className="pl-7 font-mono" value={d.importo_richiesto ?? ""} onChange={(e) => set("importo_richiesto", e.target.value === "" ? null : Number(e.target.value))} />
+          </div>
         </Campo>
         <Campo id="note" label="Note interne" span2>
           <Textarea id="note" rows={2} value={d.note ?? ""} onChange={testo("note")} />

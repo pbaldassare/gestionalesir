@@ -1,12 +1,12 @@
 import { useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { GripVertical, ImageUp, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, GripVertical, ImageUp, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import { aggiornaEnte, eliminaModello, eliminaParametro, eliminaPolizza, listaModelli, listaParametri, listaPolizze, salvaModello, salvaParametro, salvaPolizza } from "@/lib/api";
+import { aggiornaEnte, eliminaCausa, eliminaModello, eliminaParametro, eliminaPolizza, listaCause, listaModelli, listaParametri, listaPolizze, salvaCausa, salvaModello, salvaParametro, salvaPolizza } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { maxParametro } from "@/lib/valutazione";
-import { TIPOLOGIE, type ChecklistModello, type ConfigParametro, type Ente, type OpzioneScelta, type Parametro, type Polizza, type TipoParametro, type Tipologia } from "@/lib/types";
+import { TIPOLOGIE, type CausaPresunta, type ChecklistModello, type ConfigParametro, type Ente, type OpzioneScelta, type Parametro, type Polizza, type TipoParametro, type Tipologia } from "@/lib/types";
 import { Intestazione } from "@/components/layout/Intestazione";
 import { Caricamento } from "@/components/layout/Caricamento";
 import { Button } from "@/components/ui/button";
@@ -364,6 +364,77 @@ function SezionePolizze() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Cause presunte
+// ---------------------------------------------------------------------------
+function SezioneCause() {
+  const { ente } = useAuth();
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ["cause"], queryFn: listaCause });
+  const [nuova, setNuova] = useState("");
+  const [modifica, setModifica] = useState<{ id: string; nome: string } | null>(null);
+  const inv = () => qc.invalidateQueries({ queryKey: ["cause"] });
+  const errore = (e: Error) => toast.error(e.message.includes("duplicate") ? "Questa causa è già presente." : e.message);
+  const salva = useMutation({ mutationFn: (c: Partial<CausaPresunta> & { ente_id: string }) => salvaCausa(c), onSuccess: inv, onError: errore });
+  const elimina = useMutation({ mutationFn: eliminaCausa, onSuccess: inv, onError: errore });
+  // sposta la voce i di una posizione e riscrive l'ordine (10, 20, 30…) solo dove cambia
+  const sposta = useMutation({
+    mutationFn: ({ i, verso }: { i: number; verso: -1 | 1 }) => {
+      const nuovo = [...lista];
+      [nuovo[i], nuovo[i + verso]] = [nuovo[i + verso], nuovo[i]];
+      return Promise.all(nuovo.map((c, k) => (c.ordine === (k + 1) * 10 ? null : salvaCausa({ id: c.id, ente_id: c.ente_id, ordine: (k + 1) * 10 }))));
+    },
+    onSuccess: inv,
+    onError: errore,
+  });
+
+  if (q.isLoading) return <Caricamento />;
+  const lista = q.data ?? [];
+  const aggiungi = () => {
+    if (!nuova.trim()) return;
+    salva.mutate({ ente_id: ente!.id, nome: nuova.trim(), ordine: (lista.at(-1)?.ordine ?? 0) + 10 });
+    setNuova("");
+  };
+  const conferma = () => {
+    if (!modifica?.nome.trim()) return;
+    const c = lista.find((x) => x.id === modifica.id)!;
+    salva.mutate({ id: c.id, ente_id: c.ente_id, nome: modifica.nome.trim() });
+    setModifica(null);
+  };
+
+  return (
+    <div className="max-w-2xl">
+      <p className="mb-4 max-w-lg text-[13px] text-muted-foreground">Le voci del menu "Causa presunta" nel modulo del sinistro. Modificare o eliminare una voce non cambia i sinistri già registrati.</p>
+      <form className="mb-4 flex gap-2 rounded-lg border bg-card p-3" onSubmit={(e) => { e.preventDefault(); aggiungi(); }}>
+        <Input placeholder="Nuova causa (es. Buca in strada)" value={nuova} onChange={(e) => setNuova(e.target.value)} aria-label="Nuova causa presunta" />
+        <Button type="submit" disabled={!nuova.trim() || salva.isPending}><Plus className="mr-1 h-4 w-4" /> Aggiungi</Button>
+      </form>
+      <ul className="divide-y rounded-lg border bg-card">
+        {lista.map((c, i) => (
+          <li key={c.id} className="flex items-center gap-2 px-4 py-2">
+            {modifica?.id === c.id ? (
+              <form className="flex flex-1 items-center gap-2" onSubmit={(e) => { e.preventDefault(); conferma(); }}>
+                <Input autoFocus value={modifica.nome} onChange={(e) => setModifica({ ...modifica, nome: e.target.value })} onKeyDown={(e) => e.key === "Escape" && setModifica(null)} aria-label="Nome della causa" />
+                <Button type="submit" variant="ghost" size="icon" className="h-8 w-8" disabled={!modifica.nome.trim()} aria-label="Salva"><Check className="h-4 w-4" /></Button>
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => setModifica(null)} aria-label="Annulla"><X className="h-4 w-4" /></Button>
+              </form>
+            ) : (
+              <>
+                <span className="flex-1 text-[13.5px]">{c.nome}</span>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" disabled={i === 0 || sposta.isPending} onClick={() => sposta.mutate({ i, verso: -1 })} aria-label="Sposta su"><ArrowUp className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" disabled={i === lista.length - 1 || sposta.isPending} onClick={() => sposta.mutate({ i, verso: 1 })} aria-label="Sposta giù"><ArrowDown className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => setModifica({ id: c.id, nome: c.nome })} aria-label="Modifica"><Pencil className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => confirm(`Eliminare "${c.nome}"?`) && elimina.mutate(c.id)} aria-label="Elimina"><Trash2 className="h-4 w-4" /></Button>
+              </>
+            )}
+          </li>
+        ))}
+        {lista.length === 0 && <li className="px-4 py-8 text-center text-[13px] text-muted-foreground">Nessuna causa inserita.</li>}
+      </ul>
+    </div>
+  );
+}
+
 export default function Impostazioni() {
   const [params, setParams] = useSearchParams();
   const tab = params.get("tab") ?? "ente";
@@ -374,11 +445,13 @@ export default function Impostazioni() {
         <TabsList className="mb-6">
           <TabsTrigger value="ente">Ente</TabsTrigger>
           <TabsTrigger value="polizze">Polizze</TabsTrigger>
+          <TabsTrigger value="cause">Cause presunte</TabsTrigger>
           <TabsTrigger value="parametri">Parametri di valutazione</TabsTrigger>
           <TabsTrigger value="checklist">Modello di checklist</TabsTrigger>
         </TabsList>
         <TabsContent value="ente"><SezioneEnte /></TabsContent>
         <TabsContent value="polizze"><SezionePolizze /></TabsContent>
+        <TabsContent value="cause"><SezioneCause /></TabsContent>
         <TabsContent value="parametri"><SezioneParametri /></TabsContent>
         <TabsContent value="checklist"><SezioneChecklist /></TabsContent>
       </Tabs>

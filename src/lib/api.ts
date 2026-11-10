@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 import type {
-  Allegato, Polizza, ChecklistModello, ChecklistVoce, Documento, Ente, Evento, Parametro, Profilo, Sinistro, Tipologia, Valutazione,
+  Allegato, CausaPresunta, Polizza, ChecklistModello, ChecklistVoce, Documento, Ente, Evento, Parametro, Profilo, Sinistro, Tipologia, Valutazione,
 } from "./types";
 
 function lancia<T>(r: { data: T | null; error: { message: string } | null }): T {
@@ -244,4 +244,18 @@ export async function salvaPolizza(p: Partial<Polizza> & { ente_id: string }) {
 
 export async function eliminaPolizza(id: string) {
   lancia(await supabase.from("polizze").delete().eq("id", id));
+}
+
+// ---- Cause presunte ---------------------------------------------------------
+export async function listaCause(): Promise<CausaPresunta[]> {
+  return lancia(await supabase.from("cause_presunte").select("*").order("ordine").order("nome"));
+}
+
+export async function salvaCausa(c: Partial<CausaPresunta> & { ente_id: string }) {
+  if (c.id) lancia(await supabase.from("cause_presunte").update(c).eq("id", c.id));
+  else lancia(await supabase.from("cause_presunte").insert(c));
+}
+
+export async function eliminaCausa(id: string) {
+  lancia(await supabase.from("cause_presunte").delete().eq("id", id));
 }
