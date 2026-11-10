@@ -232,12 +232,12 @@ export default function Relazione() {
       </Dialog>
 
       <Dialog open={!!anteprima} onOpenChange={(o) => !o && setAnteprima(null)}>
-        <DialogContent className="max-h-[92vh] max-w-5xl overflow-hidden p-0">
+        <DialogContent className="flex max-h-[92vh] max-w-5xl flex-col gap-0 overflow-hidden p-0">
           <DialogHeader className="border-b px-6 py-4">
             <DialogTitle className="font-serif">{anteprima?.titolo}</DialogTitle>
             <DialogDescription>{anteprima && `${TIPI_DOCUMENTO[anteprima.tipo]} · ${dataIt(anteprima.created_at, true)}`}</DialogDescription>
           </DialogHeader>
-          <AnteprimaFoglio html={anteprima?.contenuto_html ?? ""} />
+          <AnteprimaFoglio html={anteprima?.contenuto_html ?? ""} className="min-h-0 flex-1" />
           <DialogFooter className="border-t px-6 py-3">
             {anteprima && <Button asChild><Link to={`/app/stampa/${anteprima.id}`} target="_blank"><ExternalLink className="mr-2 h-4 w-4" /> Apri e stampa</Link></Button>}
           </DialogFooter>

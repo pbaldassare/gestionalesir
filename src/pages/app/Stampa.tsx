@@ -5,6 +5,7 @@ import { Printer } from "lucide-react";
 import { leggiDocumento } from "@/lib/api";
 import { Caricamento } from "@/components/layout/Caricamento";
 import { Button } from "@/components/ui/button";
+import { AnteprimaFoglio } from "@/components/Foglio";
 
 export default function Stampa() {
   const { id = "" } = useParams();
@@ -23,7 +24,8 @@ export default function Stampa() {
         <div className="eyebrow">{q.data.titolo}</div>
         <Button onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" /> Stampa o salva PDF</Button>
       </div>
-      <article className="foglio mx-auto max-w-full" dangerouslySetInnerHTML={{ __html: q.data.contenuto_html }} />
+      {/* su schermo stretto il foglio si rimpicciolisce invece di schiacciarsi; in stampa resta A4 */}
+      <AnteprimaFoglio html={q.data.contenuto_html} className="bg-transparent p-0 print:overflow-visible" />
     </div>
   );
 }

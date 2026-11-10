@@ -38,11 +38,9 @@ export function TabDocumenti({ sinistro: s, voci, valutazione, documenti }: { si
   const polizze = useQuery({ queryKey: ["polizze"], queryFn: listaPolizze, enabled: !!s.polizza_id });
   const polizza = polizze.data?.find((p) => p.id === s.polizza_id) ?? null;
 
-  const mancanti = voci.filter((v) => !v.completata);
   const positivo = valutazione?.esito === "da_liquidare";
   const generatori: Generatore[] = [
     { chiave: "avvio", modelli: ["avvio_istruttoria"], titolo: TIPI_DOCUMENTO.avvio_istruttoria, descrizione: "Conferma al richiedente la presa in carico e indica i documenti ancora da produrre.", disponibile: true },
-    { chiave: "integrazione", modelli: ["richiesta_integrazione"], titolo: "Richiesta documentazione (RCVT)", descrizione: "Chiede al danneggiato i documenti mancanti della checklist, con termine di 15 giorni.", disponibile: mancanti.length > 0, motivo: "La checklist è completa: non c'è nulla da integrare." },
     { chiave: "strade", modelli: ["richiesta_relazione_tecnica"], titolo: TIPI_DOCUMENTO.richiesta_relazione_tecnica, descrizione: s.richiesta_relazione_il ? `Già inviata il ${dataIt(s.richiesta_relazione_il)}: puoi generarla di nuovo. I tecnici dell'Ufficio Strade vedono il fascicolo.` : "Trasmette la denuncia all'Area Attività Strade e apre il fascicolo ai tecnici per la relazione.", disponibile: true },
     { chiave: "scheda", modelli: [positivo ? "scheda_danno" : "scheda_danno_rigetto"], titolo: TIPI_DOCUMENTO.scheda_danno, descrizione: "Scheda interna dell'istruttoria: elementi del danno, documenti acquisiti, relazione tecnica, valutazione ed esito.", disponibile: !!valutazione, motivo: "Serve una valutazione salvata." },
     { chiave: "quietanza", modelli: ["lettera_quietanza", "atto_quietanza"], titolo: "Quietanza: lettera di invio e atto", descrizione: "Genera insieme la lettera di trasmissione e l'atto di quietanza con importo in lettere e spazio per l'IBAN.", disponibile: positivo, motivo: valutazione ? "L'esito della valutazione è negativo." : "Serve una valutazione con esito positivo." },
@@ -136,12 +134,12 @@ export function TabDocumenti({ sinistro: s, voci, valutazione, documenti }: { si
       </section>
 
       <Dialog open={!!anteprima} onOpenChange={(o) => !o && setAnteprima(null)}>
-        <DialogContent className="max-h-[92vh] max-w-5xl overflow-hidden p-0">
+        <DialogContent className="flex max-h-[92vh] max-w-5xl flex-col gap-0 overflow-hidden p-0">
           <DialogHeader className="border-b px-6 py-4">
             <DialogTitle className="font-serif">{anteprima?.titolo}</DialogTitle>
             <DialogDescription>{anteprima && `${TIPI_DOCUMENTO[anteprima.tipo]} · generato il ${dataIt(anteprima.created_at, true)}`}</DialogDescription>
           </DialogHeader>
-          <AnteprimaFoglio html={anteprima?.contenuto_html ?? ""} />
+          <AnteprimaFoglio html={anteprima?.contenuto_html ?? ""} className="min-h-0 flex-1" />
           <DialogFooter className="border-t px-6 py-3">
             {anteprima && (
               <Button asChild>

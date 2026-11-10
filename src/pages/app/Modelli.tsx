@@ -88,11 +88,9 @@ function EditorVisuale({ iniziale, onChange, registra }: { iniziale: string; onC
 
   return (
     <FoglioScalato className="max-h-[70vh]">
-      {(scala) => (
         <article
           ref={ref}
-          className="foglio foglio-modificabile origin-top-left outline-none"
-          style={{ transform: `scale(${scala})` }}
+          className="foglio foglio-modificabile outline-none"
           contentEditable
           suppressContentEditableWarning
           spellCheck
@@ -102,7 +100,6 @@ function EditorVisuale({ iniziale, onChange, registra }: { iniziale: string; onC
           onMouseUp={salvaSelezione}
           onBlur={salvaSelezione}
         />
-      )}
     </FoglioScalato>
   );
 }

@@ -1,14 +1,18 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-/** Contenitore che scala un foglio A4 (794px) alla larghezza disponibile, senza scroll orizzontale. */
-export function FoglioScalato({ children, className }: { children: (scala: number) => ReactNode; className?: string }) {
+/**
+ * Contenitore che rimpicciolisce un foglio A4 (794px) alla larghezza disponibile, senza scroll orizzontale.
+ * Usa `zoom` e non `transform`: zoom cambia anche l'ingombro, quindi niente spazio vuoto sotto i fogli lunghi
+ * e il cursore dell'editor resta allineato. In stampa torna a grandezza reale.
+ */
+export function FoglioScalato({ children, className }: { children: ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [scala, setScala] = useState(1);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const misura = () => setScala(Math.min(1, (el.clientWidth - 32) / 794));
+    const misura = () => setScala(Math.min(1, Math.max(0.2, (el.clientWidth - 32) / 794)));
     misura();
     const ro = new ResizeObserver(misura);
     ro.observe(el);
@@ -16,8 +20,8 @@ export function FoglioScalato({ children, className }: { children: (scala: numbe
   }, []);
   return (
     <div ref={ref} className={cn("overflow-auto bg-muted/60 p-4", className)}>
-      <div style={{ width: 794 * scala, minHeight: 1123 * scala }} className="mx-auto">
-        {children(scala)}
+      <div style={{ "--scala": scala } as CSSProperties} className="mx-auto w-fit [zoom:var(--scala)] print:[zoom:1]">
+        {children}
       </div>
     </div>
   );
@@ -26,7 +30,7 @@ export function FoglioScalato({ children, className }: { children: (scala: numbe
 export function AnteprimaFoglio({ html, className }: { html: string; className?: string }) {
   return (
     <FoglioScalato className={className}>
-      {(scala) => <article className="foglio origin-top-left" style={{ transform: `scale(${scala})` }} dangerouslySetInnerHTML={{ __html: html }} />}
+      <article className="foglio" dangerouslySetInnerHTML={{ __html: html }} />
     </FoglioScalato>
   );
 }

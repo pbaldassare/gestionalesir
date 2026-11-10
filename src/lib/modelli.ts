@@ -7,7 +7,6 @@ import { dataEstesa, dataIt, euro, importoInLettere } from "./format";
 
 export type ChiaveModello =
   | "avvio_istruttoria"
-  | "richiesta_integrazione"
   | "richiesta_relazione_tecnica"
   | "relazione_tecnica"
   | "scheda_danno"
@@ -28,7 +27,6 @@ export const GRUPPI_MODELLI: InfoModello["gruppo"][] = ["Istruttoria", "Ufficio 
 
 export const MODELLI: InfoModello[] = [
   { chiave: "avvio_istruttoria", tipo: "avvio_istruttoria", titolo: "Comunicazione di avvio istruttoria", descrizione: "Presa in carico e documenti ancora da produrre.", gruppo: "Istruttoria" },
-  { chiave: "richiesta_integrazione", tipo: "richiesta_integrazione", titolo: "Richiesta documentazione (RCVT)", descrizione: "Richiesta al danneggiato dei documenti mancanti, con termine di 15 giorni.", gruppo: "Istruttoria" },
   { chiave: "richiesta_relazione_tecnica", tipo: "richiesta_relazione_tecnica", titolo: "Richiesta di relazione tecnica (Strade)", descrizione: "Trasmissione della denuncia all'Area Attività Strade con richiesta di relazione entro 10 giorni.", gruppo: "Ufficio Strade" },
   { chiave: "relazione_tecnica", tipo: "relazione_tecnica", titolo: "Relazione tecnica", descrizione: "Compilata dal tecnico dell'Ufficio Strade con i dati del fascicolo. Testo provvisorio in attesa del modello ufficiale.", gruppo: "Ufficio Strade" },
   { chiave: "scheda_danno", tipo: "scheda_danno", titolo: "Scheda di valutazione", descrizione: "Scheda danno con definizione a saldo e stralcio.", gruppo: "Accoglimento" },
@@ -142,26 +140,6 @@ ${OGGETTO}
 <p>{{blocco.documenti_mancanti}}</p>
 <p>L'intera documentazione dovrà essere inviata al seguente indirizzo email: <strong>{{ente.email}}</strong>, citando sempre il numero di riferimento.</p>
 <p>Cordiali saluti.</p>
-<p>{{blocco.firma}}</p>
-<p>{{blocco.piede}}</p>`,
-
-  richiesta_integrazione: `<p>{{blocco.intestazione}}</p>
-${DESTINATARIO}
-${OGGETTO}
-<p>Salvo e impregiudicato ogni rispettivo e reciproco diritto e senza che la presente comunicazione costituisca ammissione di responsabilità alcuna, con riferimento alla domanda risarcitoria di cui all'oggetto, al fine di consentire alla scrivente Amministrazione una corretta istruttoria della pratica, si chiede di fornire, entro 15 giorni dalla data di ricevimento della presente, e qualora non si sia già provveduto, copia della seguente documentazione in Vostro possesso:</p>
-<p>{{blocco.documenti_mancanti}}</p>
-<ul>
-<li>autorizzazione al trattamento dei dati personali, allegata alla presente, debitamente sottoscritta;</li>
-<li>dichiarazioni testimoniali se e in quanto già indicate nel modulo di richiesta danni (con relativo documento d'identità dei testimoni);</li>
-<li>dichiarazione di inesistenza di ulteriori coperture assicurative in ordine al danno de quo;</li>
-<li>ogni altro documento o atto che si ritiene utile a provare l'evento dannoso.</li>
-</ul>
-<p>È possibile, altresì, fornire ogni altro documento che il/la danneggiato/a ritiene utile a provare l'evento dannoso.</p>
-<p>In caso di mancata o incompleta risposta, non potrà darsi seguito alla richiesta di risarcimento.</p>
-<p>Per la successiva gestione della pratica, è operativo l'Ufficio Assicurazioni del {{ente.nome}}, {{ente.indirizzo}}, dal lunedì al venerdì dalle ore 08.30 alle ore 12.00 al seguente riferimento telefonico {{ente.telefono}}.</p>
-<p>È possibile, altresì, inviare mail al seguente indirizzo: {{ente.email}}</p>
-<p>Per ogni comunicazione, telefonica o scritta, dovrà essere sempre fatto riferimento al numero di pratica del sinistro riportato nell'oggetto della presente.</p>
-<p>Distinti saluti.</p>
 <p>{{blocco.firma}}</p>
 <p>{{blocco.piede}}</p>`,
 
