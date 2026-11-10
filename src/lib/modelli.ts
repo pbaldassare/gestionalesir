@@ -63,7 +63,7 @@ export const CAMPI: Campo[] = [
   { nome: "ente.codice_fiscale", etichetta: "Codice fiscale / P.IVA", gruppo: "Ente" },
   { nome: "ente.sito_web", etichetta: "Sito web", gruppo: "Ente" },
   { nome: "sinistro.numero", etichetta: "Numero interno di sinistro (Ns. rif.)", gruppo: "Sinistro" },
-  { nome: "sinistro.protocollo_precedente", etichetta: "Prot. prec. n.", gruppo: "Sinistro" },
+  { nome: "sinistro.protocollo_precedente", etichetta: "Protocollo", gruppo: "Sinistro" },
   { nome: "sinistro.flusso", etichetta: "Flusso (sotto soglia / in polizza)", gruppo: "Sinistro" },
   { nome: "polizza.numero", etichetta: "Numero della polizza", gruppo: "Polizza" },
   { nome: "polizza.nome", etichetta: "Nome della polizza", gruppo: "Polizza" },
@@ -166,7 +166,6 @@ ${OGGETTO}
 <p>{{blocco.piede}}</p>`,
 
   richiesta_relazione_tecnica: `<p>{{blocco.intestazione}}</p>
-<p>Prot. prec. n. {{sinistro.protocollo_precedente}}</p>
 <div class="destinatario">All'AREA X<br/><strong>ATTIVITÀ STRADE</strong></div>
 ${OGGETTO}
 <p>Si trasmette la denuncia e la documentazione pervenuta in relazione al sinistro in oggetto, con richiesta di voler produrre allo scrivente Ufficio - entro e non oltre 10 giorni dalla data della presente - una dettagliata relazione in merito alle cause che hanno provocato il sinistro in oggetto, restituendo allo scrivente Ufficio Assicurazioni l'eventuale documentazione fotografica in originale qui allegata.</p>

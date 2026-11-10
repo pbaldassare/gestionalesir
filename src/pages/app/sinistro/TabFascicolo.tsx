@@ -54,9 +54,9 @@ export function TabFascicolo({ sinistro: s, modifica, onFineModifica }: { sinist
         <section className="rounded-lg border bg-card px-5 py-3">
           <h2 className="mb-1 text-[15px] font-semibold">Pratica</h2>
           <Riga etichetta="Numero interno" valore={s.numero_protocollo} mono />
+          <Riga etichetta="Protocollo" valore={s.protocollo_precedente} mono />
           <Riga etichetta="Flusso" valore={FLUSSI[s.flusso]} />
           {s.flusso === "polizza" && <Riga etichetta="Polizza" valore={polizza ? <><span className="font-mono">{polizza.numero}</span> · {polizza.nome}{polizza.compagnia ? <span className="text-muted-foreground"> ({polizza.compagnia})</span> : null}</> : s.polizza_id ? "…" : null} />}
-          <Riga etichetta="Prot. prec. n." valore={s.protocollo_precedente} mono />
           <Riga etichetta="Relazione tecnica" valore={s.richiesta_relazione_il ? <>richiesta il <span className="font-mono">{dataIt(s.richiesta_relazione_il)}</span></> : <span className="text-muted-foreground">non ancora richiesta</span>} />
         </section>
         <section className="rounded-lg border bg-card px-5 py-3">
