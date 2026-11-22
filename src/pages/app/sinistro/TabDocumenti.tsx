@@ -39,8 +39,17 @@ export function TabDocumenti({ sinistro: s, voci, valutazione, documenti }: { si
   const polizza = polizze.data?.find((p) => p.id === s.polizza_id) ?? null;
 
   const positivo = valutazione?.esito === "da_liquidare";
+  const mancanti = voci.filter((v) => !v.completata);
   const generatori: Generatore[] = [
     { chiave: "avvio", modelli: ["avvio_istruttoria"], titolo: TIPI_DOCUMENTO.avvio_istruttoria, descrizione: "Conferma al richiedente la presa in carico e indica i documenti ancora da produrre.", disponibile: true },
+    {
+      chiave: "integrazione",
+      modelli: ["richiesta_integrazione"],
+      titolo: TIPI_DOCUMENTO.richiesta_integrazione,
+      descrizione: "Sollecita il danneggiato con l'elenco aggiornato delle voci di checklist ancora da acquisire.",
+      disponibile: mancanti.length > 0,
+      motivo: "Tutte le voci della checklist risultano acquisite: non c'è nulla da richiedere.",
+    },
     { chiave: "strade", modelli: ["richiesta_relazione_tecnica"], titolo: TIPI_DOCUMENTO.richiesta_relazione_tecnica, descrizione: s.richiesta_relazione_il ? `Già inviata il ${dataIt(s.richiesta_relazione_il)}: puoi generarla di nuovo. I tecnici dell'Ufficio Strade vedono il fascicolo.` : "Trasmette la denuncia all'Area Attività Strade e apre il fascicolo ai tecnici per la relazione.", disponibile: true },
     { chiave: "scheda", modelli: [positivo ? "scheda_danno" : "scheda_danno_rigetto"], titolo: TIPI_DOCUMENTO.scheda_danno, descrizione: "Scheda interna dell'istruttoria: elementi del danno, documenti acquisiti, relazione tecnica, valutazione ed esito.", disponibile: !!valutazione, motivo: "Serve una valutazione salvata." },
     { chiave: "quietanza", modelli: ["lettera_quietanza", "atto_quietanza"], titolo: "Quietanza: lettera di invio e atto", descrizione: "Genera insieme la lettera di trasmissione e l'atto di quietanza con importo in lettere e spazio per l'IBAN.", disponibile: positivo, motivo: valutazione ? "L'esito della valutazione è negativo." : "Serve una valutazione con esito positivo." },

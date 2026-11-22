@@ -36,7 +36,27 @@ npm run typecheck
 npm run build
 ```
 
-Variabili in `.env` (vedi `.env.example`): URL e chiave anon del progetto, `VITE_SUPABASE_SCHEMA=gestionalesir`.
+Variabili in `.env` (vedi `.env.example`): URL e chiave anon del progetto, `VITE_SUPABASE_SCHEMA=gestionalesir`, opzionale `VITE_GOOGLE_MAPS_KEY` per mappa e geocoding.
+
+## Deploy del frontend
+
+L'app è una SPA statica (`npm run build` → cartella `dist/`). In `public/_redirects` c'è la regola per Cloudflare Pages (`/* /index.html 200`); lo stesso effetto si ottiene con `rewrite` su Netlify o Vercel.
+
+1. Collegare il repository al provider (build command: `npm run build`, output: `dist`, Node 22).
+2. Impostare le variabili `VITE_*` nel pannello di deploy (stessi valori del `.env` locale).
+3. Verificare che in Supabase *Project Settings → API → Exposed schemas* sia presente `gestionalesir`.
+
+Su ogni push su `main`, GitHub Actions esegue lint, typecheck e build (`.github/workflows/ci.yml`).
+
+### Edge function `sir-admin`
+
+Dopo modifiche in `supabase/functions/sir-admin/`:
+
+```bash
+supabase functions deploy sir-admin --project-ref uanazxrxtzcuircypklo
+```
+
+Le migration vanno applicate sul progetto condiviso con `supabase db push` o dal dashboard SQL, solo dopo revisione in ambiente di test.
 
 ## Supabase
 
@@ -49,4 +69,4 @@ Progetto condiviso `uanazxrxtzcuircypklo` ("Magnet e Piattaforma assicurativa").
 - `auth.users` è condiviso con le altre app del progetto: gli utenti SIR portano `raw_user_meta_data.app = 'gestionalesir'` e il trigger `on_auth_user_created` della piattaforma broker li ignora.
 - Lo schema è esposto a PostgREST via configurazione in-database (`alter role authenticator set pgrst.db_schemas`). Se il dashboard sovrascrive quell'impostazione, aggiungere `gestionalesir` in *Project Settings → API → Exposed schemas*.
 
-Le credenziali iniziali sono in `CREDENZIALI.local.md` (non committato).
+Le credenziali di bootstrap (se presenti) vanno tenute solo in locale, mai nel repository. Dopo il primo accesso reimpostare le password dal pannello admin.

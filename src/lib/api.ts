@@ -127,7 +127,7 @@ export async function listaAllegati(sinistroId: string): Promise<Allegato[]> {
 }
 
 export async function caricaAllegato(file: File, sinistro: Sinistro, userId: string, voceId?: string | null): Promise<Allegato> {
-  const sicuro = file.name.replace(/[^\w.\-]+/g, "_");
+  const sicuro = file.name.replace(/[^\w.-]+/g, "_");
   const path = `${sinistro.ente_id}/${sinistro.id}/${Date.now()}_${sicuro}`;
   const up = await supabase.storage.from("gestionalesir").upload(path, file, { contentType: file.type || undefined });
   if (up.error) throw new Error(up.error.message);

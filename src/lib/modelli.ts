@@ -7,6 +7,7 @@ import { dataEstesa, dataIt, euro, importoInLettere } from "./format";
 
 export type ChiaveModello =
   | "avvio_istruttoria"
+  | "richiesta_integrazione"
   | "richiesta_relazione_tecnica"
   | "relazione_tecnica"
   | "scheda_danno"
@@ -27,6 +28,7 @@ export const GRUPPI_MODELLI: InfoModello["gruppo"][] = ["Istruttoria", "Ufficio 
 
 export const MODELLI: InfoModello[] = [
   { chiave: "avvio_istruttoria", tipo: "avvio_istruttoria", titolo: "Comunicazione di avvio istruttoria", descrizione: "Presa in carico e documenti ancora da produrre.", gruppo: "Istruttoria" },
+  { chiave: "richiesta_integrazione", tipo: "richiesta_integrazione", titolo: "Richiesta di integrazione documentale", descrizione: "Sollecito al danneggiato con l'elenco aggiornato dei documenti ancora da produrre.", gruppo: "Istruttoria" },
   { chiave: "richiesta_relazione_tecnica", tipo: "richiesta_relazione_tecnica", titolo: "Richiesta di relazione tecnica (Strade)", descrizione: "Trasmissione della denuncia all'Area Attività Strade con richiesta di relazione entro 10 giorni.", gruppo: "Ufficio Strade" },
   { chiave: "relazione_tecnica", tipo: "relazione_tecnica", titolo: "Relazione tecnica", descrizione: "Compilata dal tecnico dell'Ufficio Strade con i dati del fascicolo. Testo provvisorio in attesa del modello ufficiale.", gruppo: "Ufficio Strade" },
   { chiave: "scheda_danno", tipo: "scheda_danno", titolo: "Scheda di valutazione", descrizione: "Scheda danno con definizione a saldo e stralcio.", gruppo: "Accoglimento" },
@@ -139,6 +141,18 @@ ${OGGETTO}
 <p>Per il corretto perfezionamento della pratica Vi preghiamo di far pervenire, ove non già trasmessa, la seguente documentazione:</p>
 <p>{{blocco.documenti_mancanti}}</p>
 <p>L'intera documentazione dovrà essere inviata al seguente indirizzo email: <strong>{{ente.email}}</strong>, citando sempre il numero di riferimento.</p>
+<p>Cordiali saluti.</p>
+<p>{{blocco.firma}}</p>
+<p>{{blocco.piede}}</p>`,
+
+  richiesta_integrazione: `<p>{{blocco.intestazione}}</p>
+${DESTINATARIO}
+${OGGETTO}
+<p>Gentile utente,</p>
+<p>con riferimento alla pratica indicata in oggetto, dall'esame della documentazione finora acquisita risulta necessario integrare quanto segue, ai fini del proseguimento dell'istruttoria:</p>
+<p>{{blocco.documenti_mancanti}}</p>
+<p>Si prega di far pervenire la documentazione mancante entro <strong>30 giorni</strong> dal ricevimento della presente, al seguente indirizzo email: <strong>{{ente.email}}</strong>, citando sempre il numero di riferimento.</p>
+<p>In mancanza di riscontro nel termine indicato, la pratica potrà essere valutata con le sole risultanze già acquisite.</p>
 <p>Cordiali saluti.</p>
 <p>{{blocco.firma}}</p>
 <p>{{blocco.piede}}</p>`,

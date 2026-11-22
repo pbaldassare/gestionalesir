@@ -10,7 +10,9 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+*.tsbuildinfo
 *.local
+CREDENZIALI.local.md
 
 # Environment variables (never commit secrets)
 .env
